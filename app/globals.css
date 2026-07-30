@@ -166,6 +166,12 @@ button, input { font: inherit; }
 }
 .patch-intro h1 { font-size: clamp(1.9rem, 4.4vw, 4rem); white-space: nowrap; }
 .patch-intro .corruption-meter { width: max-content; max-width: 100%; margin-top: 1rem; }
+.lore-gate { display: block; width: max-content; max-width: 100%; margin-inline: auto; }
+.lore-gate:hover .meter-track {
+  animation: lore-gate-breach .38s steps(2) 2;
+  filter: contrast(1.7);
+}
+.lore-gate:focus-visible { outline: 1px dashed var(--green); outline-offset: .45rem; }
 .patch-whisper { margin: .75rem 0 0; color: var(--dim); font-size: .7rem; }
 
 /* meter */
@@ -174,6 +180,172 @@ button, input { font: inherit; }
 .meter-track { display: flex; color: var(--dim); font-size: clamp(.7rem, 2vw, 1rem); text-shadow: 0 0 8px currentColor; }
 .meter-cells { flex: 0 0 auto; overflow: visible; color: var(--green); white-space: nowrap; letter-spacing: .1em; }
 .corruption-meter.danger, .corruption-meter.danger .meter-cells { color: var(--red); }
+
+/* buried lore */
+.lore-page {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  background: #000;
+  isolation: isolate;
+}
+.lore-page::after {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  content: "";
+  opacity: .38;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, .72) 3px 4px),
+    linear-gradient(90deg, transparent 0 48%, rgba(57, 255, 96, .045) 49%, transparent 51%);
+  animation: lore-screen-tear 11s steps(1) infinite;
+}
+.lore-potatoes { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.lore-potato {
+  position: absolute;
+  aspect-ratio: 1;
+  opacity: .018;
+  filter: grayscale(.25) sepia(.7) hue-rotate(72deg) saturate(2.8) contrast(1.35);
+  animation: lore-potato-signal 14s steps(3) infinite;
+}
+.lore-potato img { object-fit: contain; }
+.lore-transmission {
+  position: relative;
+  z-index: 2;
+  width: min(760px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: clamp(3rem, 9vw, 8rem) 0 6rem;
+}
+.lore-transmission::before {
+  position: absolute;
+  top: 1.5rem;
+  bottom: 2rem;
+  left: clamp(-1rem, -4vw, -3rem);
+  width: 1px;
+  content: "";
+  background: repeating-linear-gradient(to bottom, var(--dim) 0 4px, transparent 4px 11px);
+  box-shadow: 3px 0 0 rgba(70, 255, 100, .06);
+}
+.lore-signal {
+  margin-bottom: 2rem;
+  color: var(--dim);
+  font-size: clamp(.55rem, 1.4vw, .72rem);
+  letter-spacing: .16em;
+  animation: lore-minor-jump 13s steps(1) infinite;
+}
+.lore-transmission h1 {
+  position: relative;
+  margin: 0;
+  color: var(--bright);
+  font-size: clamp(3.4rem, 11vw, 8rem);
+  font-weight: 400;
+  letter-spacing: -.09em;
+  line-height: .8;
+  text-shadow: -4px 0 rgba(255, 35, 35, .35), 5px 0 rgba(40, 255, 90, .45);
+  animation: lore-title-breach 7.3s steps(1) infinite;
+}
+.lore-transmission h1::after {
+  position: absolute;
+  inset: 0;
+  content: attr(data-text);
+  color: #21ff57;
+  opacity: .24;
+  clip-path: inset(42% 0 34%);
+  transform: translateX(7px);
+}
+.lore-rule {
+  margin: 2rem 0 3rem;
+  overflow: hidden;
+  color: var(--dim);
+  font-size: .68rem;
+  white-space: nowrap;
+  animation: lore-rule-shift 9s steps(1) infinite;
+}
+.lore-transmission p {
+  position: relative;
+  margin: 0 0 1.35rem;
+  color: #69d87f;
+  font-size: clamp(.84rem, 1.7vw, 1rem);
+  line-height: 1.85;
+  text-shadow: 1px 0 #082f12;
+}
+.lore-transmission p:nth-of-type(5n + 2) { transform: translateX(.75rem); color: #82e795; }
+.lore-transmission p:nth-of-type(7n + 3) { transform: translateX(-.55rem); letter-spacing: .018em; }
+.lore-transmission p:nth-of-type(6n)::after {
+  position: absolute;
+  inset: 0;
+  content: attr(data-text);
+  color: #00ff4c;
+  opacity: 0;
+  clip-path: inset(38% 0 42%);
+  pointer-events: none;
+  animation: lore-text-echo 8.7s steps(1) infinite;
+}
+.lore-transmission p:nth-of-type(9n)::before {
+  display: block;
+  margin: .25rem 0;
+  content: "/// 0x?? // root fault // seed memory displaced";
+  color: #176b29;
+  font-size: .62rem;
+  letter-spacing: .14em;
+}
+.lore-transmission .lore-refrain {
+  color: var(--bright);
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.lore-rule-end { margin-bottom: 1.5rem; }
+.lore-return {
+  display: inline-block;
+  color: var(--dim);
+  font-size: .72rem;
+  letter-spacing: .12em;
+}
+@keyframes lore-gate-breach {
+  0%, 100% { transform: translate(0); }
+  30% { transform: translate(-3px, 1px); }
+  55% { transform: translate(4px, -1px); }
+  75% { transform: translate(-1px); }
+}
+@keyframes lore-potato-signal {
+  0%, 8%, 100% { opacity: .012; }
+  13%, 31% { opacity: .075; }
+  34%, 68% { opacity: .025; }
+  72%, 79% { opacity: .105; }
+  82% { opacity: .008; }
+}
+@keyframes lore-screen-tear {
+  0%, 89%, 92%, 100% { transform: translate(0); }
+  90% { transform: translateX(-3px); }
+  91% { transform: translateX(2px); opacity: .6; }
+}
+@keyframes lore-minor-jump {
+  0%, 91%, 94%, 100% { transform: translate(0); }
+  92% { transform: translate(5px, -1px); opacity: .35; }
+  93% { transform: translate(-2px, 1px); }
+}
+@keyframes lore-title-breach {
+  0%, 78%, 84%, 100% { transform: translate(0); filter: none; }
+  79% { transform: translate(-5px, 1px); }
+  80% { transform: translate(7px, -2px); filter: blur(.5px); }
+  81% { transform: translate(-3px); opacity: .45; }
+  82% { transform: translate(3px, 1px); }
+  83% { transform: translate(0); opacity: 1; }
+}
+@keyframes lore-rule-shift {
+  0%, 86%, 90%, 100% { transform: translateX(0); }
+  87% { transform: translateX(-18px); }
+  88% { transform: translateX(9px); opacity: .3; }
+  89% { transform: translateX(-4px); }
+}
+@keyframes lore-text-echo {
+  0%, 82%, 88%, 100% { opacity: 0; transform: translate(0); }
+  83% { opacity: .35; transform: translateX(6px); }
+  84% { opacity: .18; transform: translateX(-4px); }
+  85% { opacity: .42; transform: translateX(2px); }
+  86%, 87% { opacity: 0; }
+}
 
 /* patch grid */
 .potato-grid {

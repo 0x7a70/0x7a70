@@ -109,7 +109,9 @@ export function PatchView() {
       <div className="patch-shell">
         <section className="patch-intro">
           <h1>the potato patch</h1>
-          <CorruptionBar value={average} label="overall corruption" />
+          <Link className="lore-gate" href="/lore" aria-label="open the buried lore">
+            <CorruptionBar value={average} label="overall corruption" />
+          </Link>
           <p className="patch-whisper">the corruption has reached the roots.</p>
         </section>
 

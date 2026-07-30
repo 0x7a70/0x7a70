@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action, internalAction, internalMutation } from "./_generated/server";
-import { corruptionModifier, FALLBACK_LINES, randomInt, THOUGHT_DELAY_MS } from "./data";
+import { corruptionModifier, FALLBACK_LINES, randomInt, randomThoughtDelay } from "./data";
 import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT } from "./generatedContent";
 
 type TerminalActionResult = {
@@ -95,7 +95,7 @@ export const prepareThought = internalMutation({
       return { skipped: true as const };
     }
     if (state) {
-      await ctx.db.patch(state._id, { nextThoughtAt: now + THOUGHT_DELAY_MS });
+      await ctx.db.patch(state._id, { nextThoughtAt: now + randomThoughtDelay() });
     }
 
     const potatoes = await ctx.db.query("potatoes").collect();
@@ -132,7 +132,7 @@ export const storeThoughtAndSchedule = internalMutation({
         createdAt: Date.now(),
       });
     }
-    const delay = THOUGHT_DELAY_MS;
+    const delay = randomThoughtDelay();
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextThoughtAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.ai.generateThought);

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { mutation } from "./_generated/server";
-import { HOBBIES, POTATOES, randomDelay, randomInt, slugify, THOUGHT_DELAY_MS } from "./data";
+import { HOBBIES, POTATOES, randomDelay, randomInt, randomThoughtDelay, slugify } from "./data";
 
 function assertSecret(secret: string) {
   const expected = process.env.CONVEX_SERVER_SECRET;
@@ -41,7 +41,7 @@ export const initialize = mutation({
 
     const corruptionDelay = randomDelay(3, 7);
     const hobbyDelay = randomDelay(5, 9);
-    const thoughtDelay = THOUGHT_DELAY_MS;
+    const thoughtDelay = randomThoughtDelay();
     await ctx.db.insert("automationState", {
       key: "main",
       startedAt: now,

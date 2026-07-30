@@ -1,6 +1,6 @@
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
-import { randomDelay, randomInt, slugify, HOBBIES } from "./data";
+import { randomCorruptionChange, randomDelay, randomInt, slugify, HOBBIES } from "./data";
 
 export const changeCorruption = internalMutation({
   args: {},
@@ -8,10 +8,7 @@ export const changeCorruption = internalMutation({
     const potatoes = await ctx.db.query("potatoes").collect();
     if (!potatoes.length) return;
     const potato = potatoes[randomInt(0, potatoes.length - 1)];
-    let requested = randomInt(1, 15) * (Math.random() < 0.5 ? -1 : 1);
-    if ((potato.corruption === 0 && requested < 0) || (potato.corruption === 100 && requested > 0)) {
-      requested *= -1;
-    }
+    const requested = randomCorruptionChange(potato.corruption);
     const next = Math.max(0, Math.min(100, potato.corruption + requested));
     const delta = next - potato.corruption;
     await ctx.db.patch(potato._id, { corruption: next, updatedAt: Date.now() });

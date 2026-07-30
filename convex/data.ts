@@ -21,7 +21,29 @@ export const randomInt = (min: number, max: number) =>
 export const randomDelay = (minMinutes: number, maxMinutes: number) =>
   randomInt(minMinutes * 60_000, maxMinutes * 60_000);
 
-export const THOUGHT_DELAY_MS = 15 * 60_000;
+export const randomThoughtDelay = () => randomDelay(7, 10);
+
+export function randomCorruptionChange(current: number) {
+  // Most changes are plainly visible, with occasional larger shocks.
+  const magnitude = Math.min(
+    35,
+    randomInt(4, 24) + (Math.random() < 0.18 ? randomInt(8, 18) : 0),
+  );
+
+  // A mild outward bias keeps individual potatoes from clustering around the
+  // midpoint while preserving plenty of reversals and movement in both directions.
+  const awayFromMiddle = Math.random() < 0.62;
+  const outwardDirection = current === 50
+    ? (Math.random() < 0.5 ? -1 : 1)
+    : (current < 50 ? -1 : 1);
+  let direction = awayFromMiddle ? outwardDirection : -outwardDirection;
+
+  if ((current <= 0 && direction < 0) || (current >= 100 && direction > 0)) {
+    direction *= -1;
+  }
+
+  return direction * magnitude;
+}
 
 export const FALLBACK_LINES = [
   "The root line is occupied. Your message remains warm in the soil.",
