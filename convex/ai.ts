@@ -24,6 +24,7 @@ type ChatMessage = {
 };
 
 type ReasoningEffort = "low" | "medium" | "high";
+const THOUGHT_MAX_ATTEMPTS = 10;
 
 function fill(template: string, values: Record<string, string | number>) {
   return Object.entries(values).reduce(
@@ -169,19 +170,19 @@ export const generateThought = internalAction({
       return;
     }
     let thought: string | undefined;
-    try {
-      const prompt = fill(THOUGHT_PROMPT, {
-        potatoName: prepared.potato.name,
-        internalPersonalityDescription: PERSONALITIES[prepared.potato.name] || "",
-        corruptionPercentage: prepared.potato.corruption,
-        corruptionModifier: corruptionModifier(prepared.potato.corruption),
-        currentHobbies: prepared.potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
-        previousThoughts: prepared.previousThoughts || "None yet.",
-      });
-      for (let attempt = 1; attempt <= 2 && !thought; attempt += 1) {
+    const prompt = fill(THOUGHT_PROMPT, {
+      potatoName: prepared.potato.name,
+      internalPersonalityDescription: PERSONALITIES[prepared.potato.name] || "",
+      corruptionPercentage: prepared.potato.corruption,
+      corruptionModifier: corruptionModifier(prepared.potato.corruption),
+      currentHobbies: prepared.potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
+      previousThoughts: prepared.previousThoughts || "None yet.",
+    });
+    for (let attempt = 1; attempt <= THOUGHT_MAX_ATTEMPTS && !thought; attempt += 1) {
+      try {
         const instruction = attempt === 1
           ? "Generate the single private thought now. Return only the thought."
-          : "The previous result was too short. Generate a fresh thought containing exactly 20 to 30 words. Return only the thought.";
+          : "The previous attempt did not produce a valid result. Generate a fresh thought containing exactly 20 to 30 words. Return only the thought.";
         const candidate = normalize(await openRouter([
           { role: "system", content: prompt },
           { role: "user", content: instruction },
@@ -196,9 +197,21 @@ export const generateThought = internalAction({
         } else {
           console.warn("thought_output_invalid", { attempt, words });
         }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown";
+        console.error("thought_generation_attempt_failed", { attempt, message });
+        // Authentication, permission, and exhausted-credit failures cannot be
+        // repaired by retrying the same request ten times.
+        if (/\b(401|402|403)\b/.test(message)) break;
       }
-    } catch (error) {
-      console.error("thought_generation_failed", error instanceof Error ? error.message : "unknown");
+
+      if (!thought && attempt < THOUGHT_MAX_ATTEMPTS) {
+        const retryDelay = Math.min(3_000, 500 * attempt);
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+    }
+    if (!thought) {
+      console.error("thought_generation_failed", `no valid output after ${THOUGHT_MAX_ATTEMPTS} attempts`);
     }
     await ctx.runMutation(internal.ai.storeThought, {
       potatoSlug: prepared.potato.slug,

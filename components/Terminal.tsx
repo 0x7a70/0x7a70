@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import type { TerminalResponse, TerminalTurn } from "@/lib/types";
 
 const MAX_HISTORY_WORDS = 2000;
@@ -30,7 +30,17 @@ function getSessionId() {
   return created;
 }
 
-export function Terminal({ potatoSlug, potatoName }: { potatoSlug: string; potatoName: string }) {
+export function Terminal({
+  potatoSlug,
+  potatoName,
+  headerControl,
+  className = "",
+}: {
+  potatoSlug: string;
+  potatoName: string;
+  headerControl?: ReactNode;
+  className?: string;
+}) {
   const [turns, setTurns] = useState<TerminalTurn[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -40,7 +50,7 @@ export function Terminal({ potatoSlug, potatoName }: { potatoSlug: string; potat
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(historyKey(potatoSlug));
-      if (saved) setTurns(JSON.parse(saved));
+      setTurns(saved ? JSON.parse(saved) : []);
     } catch {
       sessionStorage.removeItem(historyKey(potatoSlug));
     }
@@ -87,9 +97,10 @@ export function Terminal({ potatoSlug, potatoName }: { potatoSlug: string; potat
   }
 
   return (
-    <section className="terminal-panel" aria-labelledby="terminal-heading">
+    <section className={`terminal-panel ${className}`.trim()} aria-labelledby={`terminal-heading-${potatoSlug}`}>
       <div className="terminal-title">
-        <h2 id="terminal-heading">terminal::{potatoSlug}</h2>
+        <h2 id={`terminal-heading-${potatoSlug}`}>terminal::{potatoSlug}</h2>
+        {headerControl}
       </div>
       <div className="terminal-output" ref={scrollRef} aria-live="polite">
         <p className="system-line">connection established. speak carefully.</p>

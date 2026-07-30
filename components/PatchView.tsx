@@ -9,6 +9,7 @@ import { FALLBACK_POTATOES } from "@/lib/fallback";
 import type { Potato } from "@/lib/types";
 import { CorruptionBar } from "./CorruptionBar";
 import { EventFeed } from "./EventFeed";
+import { PatchTerminal } from "./PatchTerminal";
 import { SiteHeader } from "./SiteHeader";
 
 const FIELD_POSITIONS: Array<{ x: number; y: number; scale?: number }> = [
@@ -144,7 +145,10 @@ export function PatchView() {
               );
             })}
           </section>
-          <EventFeed />
+          <aside className="patch-sidebar" aria-label="patch transmissions">
+            <EventFeed />
+            <PatchTerminal potatoes={potatoes} />
+          </aside>
         </div>
       </div>
     </main>

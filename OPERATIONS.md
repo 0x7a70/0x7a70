@@ -40,7 +40,9 @@ Terminal limits are enforced in `convex/ai.ts`: five seconds between messages
 and 100 messages per hashed visitor/session per UTC day. Automated thoughts use
 a newly randomized interval of four to eight minutes after every run. Each run
 durably schedules its successor before contacting the AI provider, so a failed
-or invalid generation skips only that thought and does not stop the loop.
+or invalid generation skips only that thought and does not stop the loop. A
+thought may make up to ten generation attempts with a short capped backoff;
+authentication, permission, and exhausted-credit errors stop retrying early.
 
 Rotate either secret by updating Convex and Vercel together, then redeploy.
 Existing terminal sessions may receive an in-world fallback during rotation.
