@@ -36,8 +36,9 @@ Use prepaid OpenRouter credits with automatic top-up disabled and apply a
 credit limit to the project key. When the balance or key limit is exhausted,
 terminal requests use their existing in-world fallback and automated thoughts
 resume normally at the next interval.
-Terminal limits are enforced in `convex/ai.ts`: five seconds between messages
-and 100 messages per hashed visitor/session per UTC day. Automated thoughts use
+Terminal limits are enforced in `convex/ai.ts`: one second between messages
+and 100 messages per hashed visitor/session per UTC day. Terminal generation
+makes up to two attempts before returning its fallback. Automated thoughts use
 a newly randomized interval of four to eight minutes after every run. Each run
 durably schedules its successor before contacting the AI provider, so a failed
 or invalid generation skips only that thought and does not stop the loop. A

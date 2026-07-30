@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     if ("limited" in result) {
       const error = result.limited === "daily"
         ? "this root has carried enough messages for one day."
-        : "the roots need ten seconds between transmissions.";
+        : "the roots need one second between transmissions.";
       return NextResponse.json({ error }, { status: 429 });
     }
     return NextResponse.json(result);

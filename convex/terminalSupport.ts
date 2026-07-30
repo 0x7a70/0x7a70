@@ -7,7 +7,7 @@ export const consumeRateLimit = internalMutation({
     const now = Date.now();
     const day = new Date(now).toISOString().slice(0, 10);
     const record = await ctx.db.query("rateLimits").withIndex("by_key", (q) => q.eq("key", key)).unique();
-    if (record && now - record.lastRequestAt < 5_000) return { allowed: false, reason: "cooldown" };
+    if (record && now - record.lastRequestAt < 1_000) return { allowed: false, reason: "cooldown" };
     if (record && record.day === day && record.count >= 100) return { allowed: false, reason: "daily" };
     if (record) {
       await ctx.db.patch(record._id, {

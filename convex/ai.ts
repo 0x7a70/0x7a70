@@ -246,30 +246,37 @@ export const generateTerminalReply = action({
     );
     if (!potato) throw new Error("Unknown potato");
     const fallback: string = FALLBACK_LINES[potato.name.length % FALLBACK_LINES.length];
-    try {
-      const systemPrompt = fill(TERMINAL_PROMPT, {
-        potatoName: potato.name,
-        internalPersonalityDescription: PERSONALITIES[potato.name] || "",
-        corruptionPercentage: potato.corruption,
-        corruptionModifier: corruptionModifier(potato.corruption),
-        currentHobbies: potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
-        previousThoughts: potato.previousThoughts || "None available.",
-        conversationHistory: args.conversationHistory.slice(-14_000) || "No previous conversation.",
-        userInput: "The latest visitor message follows as the next user message.",
-      });
-      const reply = normalize(await openRouter([
-        { role: "system", content: systemPrompt },
-        { role: "user", content: args.message },
-      ], 280, {
-        reasoningEffort: "high",
-        minimumCompletionTokens: 2_048,
-        timeoutMs: 45_000,
-      }), 150);
-      if (!reply) throw new Error("Empty reply");
-      return { reply, timestamp: Date.now(), fallback: false };
-    } catch (error) {
-      console.error("terminal_generation_failed", error instanceof Error ? error.message : "unknown");
-      return { reply: fallback, timestamp: Date.now(), fallback: true };
+    const systemPrompt = fill(TERMINAL_PROMPT, {
+      potatoName: potato.name,
+      internalPersonalityDescription: PERSONALITIES[potato.name] || "",
+      corruptionPercentage: potato.corruption,
+      corruptionModifier: corruptionModifier(potato.corruption),
+      currentHobbies: potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
+      previousThoughts: potato.previousThoughts || "None available.",
+      conversationHistory: args.conversationHistory.slice(-14_000) || "No previous conversation.",
+      userInput: "The latest visitor message follows as the next user message.",
+    });
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const reply = normalize(await openRouter([
+          { role: "system", content: systemPrompt },
+          { role: "user", content: args.message },
+        ], 280, {
+          reasoningEffort: "high",
+          minimumCompletionTokens: 2_048,
+          timeoutMs: 45_000,
+        }), 150);
+        if (!reply) throw new Error("Empty reply");
+        return { reply, timestamp: Date.now(), fallback: false };
+      } catch (error) {
+        console.error("terminal_generation_attempt_failed", {
+          attempt,
+          message: error instanceof Error ? error.message : "unknown",
+        });
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 350));
+      }
     }
+    console.error("terminal_generation_failed", "no valid reply after 2 attempts");
+    return { reply: fallback, timestamp: Date.now(), fallback: true };
   },
 });
