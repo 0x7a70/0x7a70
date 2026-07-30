@@ -109,9 +109,14 @@ export const prepareThought = internalMutation({
     if (state?.nextThoughtAt && now < state.nextThoughtAt - 5_000) {
       return { skipped: true as const };
     }
+    const nextDelay = randomThoughtDelay();
     if (state) {
-      await ctx.db.patch(state._id, { nextThoughtAt: now + randomThoughtDelay() });
+      await ctx.db.patch(state._id, { nextThoughtAt: now + nextDelay });
     }
+    // Schedule the next run inside this durable mutation before making the
+    // external AI request. A failed, timed-out, or invalid generation can
+    // therefore miss one thought without breaking the recurring loop.
+    await ctx.scheduler.runAfter(nextDelay, internal.ai.generateThought);
 
     const potatoes = await ctx.db.query("potatoes").collect();
     if (!potatoes.length) return { skipped: false as const, prepared: null };
@@ -135,7 +140,7 @@ export const prepareThought = internalMutation({
   },
 });
 
-export const storeThoughtAndSchedule = internalMutation({
+export const storeThought = internalMutation({
   args: {
     potatoSlug: v.optional(v.string()),
     potatoName: v.optional(v.string()),
@@ -151,10 +156,6 @@ export const storeThoughtAndSchedule = internalMutation({
         createdAt: Date.now(),
       });
     }
-    const delay = randomThoughtDelay();
-    const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
-    if (state) await ctx.db.patch(state._id, { nextThoughtAt: Date.now() + delay });
-    await ctx.scheduler.runAfter(delay, internal.ai.generateThought);
   },
 });
 
@@ -165,7 +166,6 @@ export const generateThought = internalAction({
     if (claim.skipped) return;
     const prepared = claim.prepared;
     if (!prepared) {
-      await ctx.runMutation(internal.ai.storeThoughtAndSchedule, {});
       return;
     }
     let thought: string | undefined;
@@ -178,20 +178,29 @@ export const generateThought = internalAction({
         currentHobbies: prepared.potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
         previousThoughts: prepared.previousThoughts || "None yet.",
       });
-      const candidate = normalize(await openRouter([
-        { role: "system", content: prompt },
-        { role: "user", content: "Generate the single private thought now. Return only the thought." },
-      ], 80, {
-        reasoningEffort: "high",
-        minimumCompletionTokens: 2_048,
-        timeoutMs: 45_000,
-      }), 30);
-      const words = candidate.split(/\s+/).length;
-      if (words >= 20 && words <= 30) thought = candidate;
+      for (let attempt = 1; attempt <= 2 && !thought; attempt += 1) {
+        const instruction = attempt === 1
+          ? "Generate the single private thought now. Return only the thought."
+          : "The previous result was too short. Generate a fresh thought containing exactly 20 to 30 words. Return only the thought.";
+        const candidate = normalize(await openRouter([
+          { role: "system", content: prompt },
+          { role: "user", content: instruction },
+        ], 80, {
+          reasoningEffort: "high",
+          minimumCompletionTokens: 2_048,
+          timeoutMs: 45_000,
+        }), 30);
+        const words = candidate ? candidate.split(/\s+/).length : 0;
+        if (words >= 20 && words <= 30) {
+          thought = candidate;
+        } else {
+          console.warn("thought_output_invalid", { attempt, words });
+        }
+      }
     } catch (error) {
       console.error("thought_generation_failed", error instanceof Error ? error.message : "unknown");
     }
-    await ctx.runMutation(internal.ai.storeThoughtAndSchedule, {
+    await ctx.runMutation(internal.ai.storeThought, {
       potatoSlug: prepared.potato.slug,
       potatoName: prepared.potato.name,
       thought,

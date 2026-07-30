@@ -64,3 +64,22 @@ export const status = mutation({
     return { initialized: Boolean(state), state };
   },
 });
+
+export const restartThoughts = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, { secret }) => {
+    assertSecret(secret);
+    const state = await ctx.db
+      .query("automationState")
+      .withIndex("by_key", (q) => q.eq("key", "main"))
+      .unique();
+    if (!state) throw new Error("Patch is not initialized.");
+
+    // Start promptly. Any older scheduled thought will see the updated
+    // nextThoughtAt lease and exit without creating a duplicate loop.
+    const delay = 1_000;
+    await ctx.db.patch(state._id, { nextThoughtAt: Date.now() + delay });
+    await ctx.scheduler.runAfter(delay, internal.ai.generateThought);
+    return { restarted: true, nextThoughtAt: Date.now() + delay };
+  },
+});
