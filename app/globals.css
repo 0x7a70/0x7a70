@@ -612,7 +612,7 @@ button, input { font: inherit; }
   display: grid;
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   gap: .4rem;
-  height: clamp(430px, calc(100vh - 10rem), 720px);
+  height: clamp(470px, calc(100vh - 8.75rem), 780px);
   min-width: 0;
 }
 .patch-sidebar > .event-panel,
@@ -644,14 +644,27 @@ button, input { font: inherit; }
 .patch-sidebar .terminal-output p { font-size: .67rem; }
 .patch-sidebar .terminal-form { padding: .55rem; gap: .4rem; }
 .patch-sidebar .terminal-form button { padding: .25rem .45rem; font-size: .62rem; }
-.patch-terminal-selector { margin-left: auto; }
+.patch-sidebar .terminal-title { gap: .35rem; padding: .55rem .65rem; }
+.patch-terminal-selector {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  margin-left: auto;
+}
+.patch-terminal-selector-label {
+  color: var(--bright);
+  font-size: .52rem;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
 .patch-terminal-selector select {
-  width: 98px;
-  border: 1px dashed var(--dim);
-  padding: .18rem .25rem;
-  color: var(--green);
-  background: #000;
-  font: 400 .58rem/1.2 var(--mono);
+  width: 94px;
+  border: 1px solid #43c25d;
+  padding: .22rem .3rem;
+  color: var(--bright);
+  background: #031107;
+  box-shadow: 0 0 8px rgba(65, 255, 100, .13);
+  font: 700 .58rem/1.2 var(--mono);
   text-transform: lowercase;
   cursor: pointer;
 }

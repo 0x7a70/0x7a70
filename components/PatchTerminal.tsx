@@ -14,7 +14,7 @@ export function PatchTerminal({ potatoes }: { potatoes: Potato[] }) {
 
   const selector = (
     <label className="patch-terminal-selector">
-      <span className="sr-only">choose a potato to talk to</span>
+      <span className="patch-terminal-selector-label">talk to:</span>
       <select value={selected.slug} onChange={(event) => setSelectedSlug(event.target.value)}>
         {potatoes.map((potato) => (
           <option value={potato.slug} key={potato.slug}>{potato.name}</option>
