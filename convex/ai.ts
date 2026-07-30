@@ -50,14 +50,12 @@ async function openRouter(
     reasoningEffort?: ReasoningEffort;
     minimumCompletionTokens?: number;
     timeoutMs?: number;
-    providerSort?: "latency" | "throughput";
   } = {},
 ) {
   const {
     reasoningEffort = "low",
     minimumCompletionTokens = 512,
     timeoutMs = 30_000,
-    providerSort,
   } = options;
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY is not configured");
@@ -81,7 +79,6 @@ async function openRouter(
         effort: reasoningEffort,
         exclude: true,
       },
-      provider: providerSort ? { sort: providerSort } : undefined,
       temperature: 0.7,
     }),
     signal: AbortSignal.timeout(timeoutMs),
@@ -265,10 +262,9 @@ export const generateTerminalReply = action({
           { role: "system", content: systemPrompt },
           { role: "user", content: args.message },
         ], 280, {
-          reasoningEffort: "medium",
-          minimumCompletionTokens: 1_024,
-          timeoutMs: 30_000,
-          providerSort: "throughput",
+          reasoningEffort: "high",
+          minimumCompletionTokens: 1_536,
+          timeoutMs: 38_000,
         }), 150);
         if (!reply) throw new Error("Empty reply");
         return { reply, timestamp: Date.now(), fallback: false };
