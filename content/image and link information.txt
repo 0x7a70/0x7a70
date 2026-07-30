@@ -1,0 +1,21 @@
+X link: https://x.com/0x7a70
+contract: 0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f
+contract text should link to: https://potato.fm/token/0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f
+also in the top right next to left include a small potato1.png icon that also links to https://potato.fm/token/0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f
+
+image links: https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/background.png
+
+background for the first page that says enter the potato patch
+
+potato1 (0 to 25 corruption) https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/potato1.png
+
+potato2 (25 to 50 corruption) https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/potato2.png
+
+potato3 (50 to 75 corruption) https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/potato3.png
+
+potato4 (75 to 100 corruption) https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/potato4.png
+
+x icon https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/x.png
+
+favicon small https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/favicon.png
+favicon large https://xn7vvoayg4wfvz7s.public.blob.vercel-storage.com/faviconlarge.png

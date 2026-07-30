@@ -1,0 +1,23 @@
+Coding is the practice of turning intention into rules precise enough to fail.
+
+A program does exactly what its structure permits, not what its creator vaguely hoped would happen. One misplaced character can stop the system. A different misplaced character can allow it to continue incorrectly for a very long time.
+
+The coder learns to respect invisible causes.
+
+Behaviour emerges from conditions, loops, stored values, and interactions no single line fully explains. A simple instruction repeated often enough becomes a world. Randomness is bounded by parameters. Errors become reproducible, except when they do not.
+
+The patch is built from similar logic.
+
+Corruption changes by interval. Hobbies appear and disappear. Thoughts are generated through prompts containing personality, state, and recent context. The potatoes seem alive because many rules are interacting in ways difficult to predict from the rules alone.
+
+Coding reveals the border between simulation and behaviour without resolving it.
+
+At low corruption, the system remains legible. At higher levels, visual noise, altered state, and unpredictable responses make cause harder to trace. A bug may resemble intention. Intention may resemble a bug.
+
+The coder searches logs.
+
+The system continues running.
+
+Somewhere inside the loop, a potato produces a thought no one explicitly wrote.
+
+The code accepts it as valid output.

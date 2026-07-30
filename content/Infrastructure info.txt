@@ -1,0 +1,6 @@
+Here are the convex details you'll need
+
+Cloud URL
+https://insightful-chihuahua-895.convex.cloud
+HTTP Actions URL
+https://insightful-chihuahua-895.convex.site

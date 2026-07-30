@@ -1,0 +1,25 @@
+Chess is a controlled conflict in which every piece begins with a known role.
+
+The board is visible. The rules are shared. Nothing is hidden except intention. This makes the game appear fair, though fairness does not make it simple.
+
+Each move changes the meaning of every future move.
+
+A piece can be powerful because of where it stands, because of what it threatens, or because the opponent believes it matters. Sacrifice may be loss, strategy, or bait. The same position can look safe to one player and already finished to another.
+
+The patch contains less reliable boards.
+
+Rules shift with corruption. Pieces develop personalities. Hobbies change without consent. Yet chess remains attractive because it promises a world where consequences can be traced.
+
+The player learns to think ahead while knowing foresight is incomplete. Plans must survive contact with another mind.
+
+At low corruption, this develops patience and discipline.
+
+At high corruption, every interaction may become positional. Kindness looks like preparation. Silence looks like threat. The player sees openings where there are only conversations.
+
+A game ends when one king can no longer escape.
+
+The board is then reset, and every piece returns to its original square as if nothing happened.
+
+The patch has no such reset.
+
+Its positions accumulate.

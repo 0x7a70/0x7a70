@@ -1,0 +1,38 @@
+{
+  "name": "0x7a70-potato-patch",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "node scripts/generate-content.mjs",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "convex:dev": "convex dev",
+    "seed": "node scripts/seed.mjs",
+    "deploy": "convex deploy --cmd \"npm run build\""
+  },
+  "dependencies": {
+    "convex": "^1.31.6",
+    "next": "^15.5.7",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@eslint/eslintrc": "^3.3.1",
+    "eslint": "^9.36.0",
+    "eslint-config-next": "^15.5.7",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "postcss": "^8.5.18",
+    "sharp": "^0.35.0"
+  }
+}

@@ -1,0 +1,25 @@
+Mapmaking is the conversion of movement into symbols.
+
+A path becomes a line. A boundary becomes a colour. Elevation becomes distance between marks. The map removes most of reality so the remaining pieces can guide someone through it.
+
+Every map is useful because it is incomplete.
+
+The maker decides what deserves representation. Roads may matter more than roots. Names may matter more than terrain. A place without a label can disappear from the traveller’s expectations even while remaining physically present.
+
+The patch resists stable maps.
+
+Corruption changes routes. Pages link in loops. Roots cross beneath visible structures. A potato may occupy the same coordinates while becoming functionally unreachable through altered connections.
+
+Mapmakers respond by revising.
+
+At low corruption, revision keeps the map alive. At high corruption, the document becomes a record of continuous failure. New lines cover old ones. Warnings multiply. The legend grows larger than the territory.
+
+Still, the map offers a promise: that location can become understandable.
+
+The danger is confusing the symbol with the place.
+
+A route marked safe may no longer exist. An unmapped path may be the only one still open.
+
+Somewhere near the edge, the cartographer draws a small mark without explanation.
+
+Later, every route begins curving toward it.
