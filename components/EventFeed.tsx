@@ -1,20 +1,12 @@
 "use client";
 
-import { UIEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { RelativeTime } from "./RelativeTime";
 import type { PatchEvent } from "@/lib/types";
 
-export function EventFeed({
-  potatoSlug,
-  revealLoadAtBottom = false,
-}: {
-  potatoSlug?: string;
-  revealLoadAtBottom?: boolean;
-}) {
-  const [reachedBottom, setReachedBottom] = useState(false);
+export function EventFeed({ potatoSlug }: { potatoSlug?: string }) {
   const global = usePaginatedQuery(api.queries.recentEvents, {}, { initialNumItems: 12 });
   const local = usePaginatedQuery(
     api.queries.potatoEvents,
@@ -25,18 +17,6 @@ export function EventFeed({
   const visibleEvents = (source.results as Array<PatchEvent & { _id: string }>).filter(
     (event) => event.type !== "corruption" || event.delta !== 0,
   );
-
-  useEffect(() => {
-    if (revealLoadAtBottom) setReachedBottom(false);
-  }, [revealLoadAtBottom, source.results.length]);
-
-  const detectBottom = (event: UIEvent<HTMLDivElement>) => {
-    if (!revealLoadAtBottom) return;
-    const element = event.currentTarget;
-    setReachedBottom(
-      element.scrollTop + element.clientHeight >= element.scrollHeight - 8,
-    );
-  };
 
   const withoutRepeatedName = (event: PatchEvent) => {
     if (potatoSlug) return event.text;
@@ -68,7 +48,7 @@ export function EventFeed({
         <h2 id="event-feed-heading">{potatoSlug ? "local transmissions" : "patch events"}</h2>
         <span className="live-dot">● live</span>
       </div>
-      <div className="event-list" aria-live="polite" onScroll={detectBottom}>
+      <div className="event-list" aria-live="polite">
         {visibleEvents.map((event) => (
           <article className={`event event-${event.type}`} key={event._id}>
             <div>
@@ -85,10 +65,12 @@ export function EventFeed({
         ))}
         {source.status === "LoadingFirstPage" && <p className="muted">listening beneath the soil...</p>}
         {source.status === "Exhausted" && source.results.length === 0 && <p className="muted">no events have surfaced yet.</p>}
+        {source.status === "CanLoadMore" && (
+          <button className="plain-button event-load-more" onClick={() => source.loadMore(12)}>
+            unearth older events
+          </button>
+        )}
       </div>
-      {source.status === "CanLoadMore" && (!revealLoadAtBottom || reachedBottom) && (
-        <button className="plain-button" onClick={() => source.loadMore(12)}>unearth older events</button>
-      )}
     </section>
   );
 }

@@ -469,6 +469,7 @@ button, input { font: inherit; }
   width: 100%; border: 0; border-top: 1px solid var(--line); padding: .8rem;
   color: var(--dim); background: transparent; cursor: pointer;
 }
+.event-load-more { display: block; margin-top: 0; }
 .plain-button:hover { color: var(--bright); background: rgba(65,255,100,.05); }
 
 /* detail */
@@ -601,6 +602,7 @@ button, input { font: inherit; }
 }
 /* shared subterranean root map */
 .patch-main {
+  --patch-field-shift: 36px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(294px, 330px);
   gap: .35rem;
@@ -710,14 +712,14 @@ button, input { font: inherit; }
   letter-spacing: 0;
   white-space: pre;
   text-shadow: 1px 0 rgba(72, 255, 103, .24), -1px 0 #020603;
-  transform: scaleX(1.01);
+  transform: translateX(var(--patch-field-shift)) scaleX(1.01);
   transform-origin: top center;
   pointer-events: none;
 }
 .potato-grid > .potato-card:nth-of-type(n) {
   position: absolute;
   z-index: 3;
-  left: calc(var(--x) * 1%);
+  left: calc(var(--x) * 1% + var(--patch-field-shift));
   top: calc(var(--y) * 1%);
   width: clamp(88px, 8.5vw, 132px);
   margin: 0;
@@ -910,7 +912,10 @@ button, input { font: inherit; }
   89% { transform: translate(0); opacity: .5; filter: none; }
 }
 @media (max-width: 900px) {
-  .patch-main { grid-template-columns: 1fr; }
+  .patch-main {
+    --patch-field-shift: 0px;
+    grid-template-columns: 1fr;
+  }
   .patch-sidebar {
     position: relative;
     top: auto;
@@ -934,7 +939,7 @@ button, input { font: inherit; }
   .potato-grid > .potato-card:hover {
     transform: translate(-50%, -50%) scale(var(--potato-scale));
   }
-  .root-network { transform: scaleX(1.01); }
+  .root-network { transform: translateX(var(--patch-field-shift)) scaleX(1.01); }
   .header-contract { font-size: .45rem; letter-spacing: -.04em; }
 }
 

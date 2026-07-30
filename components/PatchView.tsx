@@ -146,7 +146,7 @@ export function PatchView() {
             })}
           </section>
           <aside className="patch-sidebar" aria-label="patch transmissions">
-            <EventFeed revealLoadAtBottom />
+            <EventFeed />
             <PatchTerminal potatoes={potatoes} />
           </aside>
         </div>
