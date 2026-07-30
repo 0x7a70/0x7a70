@@ -38,7 +38,9 @@ terminal requests use their existing in-world fallback and automated thoughts
 resume normally at the next interval.
 Terminal limits are enforced in `convex/ai.ts`: one second between messages
 and 100 messages per hashed visitor/session per UTC day. Terminal generation
-makes up to two attempts before returning its fallback. Automated thoughts use
+makes up to two attempts before returning its fallback. Interactive requests
+use medium reasoning and throughput-prioritized OpenRouter routing; scheduled
+thoughts retain high reasoning. Automated thoughts use
 a newly randomized interval of four to eight minutes after every run. Each run
 durably schedules its successor before contacting the AI provider, so a failed
 or invalid generation skips only that thought and does not stop the loop. A
