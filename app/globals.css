@@ -158,7 +158,7 @@ button, input { font: inherit; }
   display: none;
 }
 .patch-shell, .detail-shell { width: min(1440px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(2rem, 5vw, 5rem) 0; }
-.patch-shell { width: 100%; padding: clamp(1rem, 2.2vw, 2.2rem) 0 0 .5rem; }
+.patch-shell { width: 100%; padding: clamp(1rem, 2.2vw, 2.2rem) 0 0; }
 .patch-shell { position: relative; z-index: 1; }
 .patch-intro { width: min(920px, 100%); margin-inline: auto; text-align: center; }
 .patch-intro h1, .potato-copy h1, .hobby-hero h1 {
@@ -469,7 +469,16 @@ button, input { font: inherit; }
   width: 100%; border: 0; border-top: 1px solid var(--line); padding: .8rem;
   color: var(--dim); background: transparent; cursor: pointer;
 }
-.event-load-more { display: block; margin-top: 0; }
+.event-load-more {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: block;
+  flex: 0 0 auto;
+  margin-top: 0;
+  background: #000;
+  box-shadow: 0 -8px 14px rgba(0, 0, 0, .88);
+}
 .plain-button:hover { color: var(--bright); background: rgba(65,255,100,.05); }
 
 /* detail */
@@ -602,7 +611,9 @@ button, input { font: inherit; }
 }
 /* shared subterranean root map */
 .patch-main {
-  --patch-field-shift: 36px;
+  /* The generated network's main trunk is at 65% of its field. Offset that
+     coordinate to the actual viewport center, independently of sidebar width. */
+  --patch-field-shift: calc(50vw - 65%);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(294px, 330px);
   gap: .35rem;
@@ -700,7 +711,7 @@ button, input { font: inherit; }
 }
 .root-network {
   position: absolute;
-  inset: 0;
+  inset: 0 auto auto var(--patch-field-shift);
   z-index: 0;
   width: 100%;
   height: 100%;
@@ -712,8 +723,8 @@ button, input { font: inherit; }
   letter-spacing: 0;
   white-space: pre;
   text-shadow: 1px 0 rgba(72, 255, 103, .24), -1px 0 #020603;
-  transform: translateX(var(--patch-field-shift)) scaleX(1.01);
-  transform-origin: top center;
+  transform: scaleX(1.01);
+  transform-origin: 65% top;
   pointer-events: none;
 }
 .potato-grid > .potato-card:nth-of-type(n) {
@@ -939,7 +950,7 @@ button, input { font: inherit; }
   .potato-grid > .potato-card:hover {
     transform: translate(-50%, -50%) scale(var(--potato-scale));
   }
-  .root-network { transform: translateX(var(--patch-field-shift)) scaleX(1.01); }
+  .root-network { transform: scaleX(1.01); }
   .header-contract { font-size: .45rem; letter-spacing: -.04em; }
 }
 
