@@ -602,7 +602,7 @@ button, input { font: inherit; }
 /* shared subterranean root map */
 .patch-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(245px, 275px);
+  grid-template-columns: minmax(0, 1fr) minmax(294px, 330px);
   gap: .35rem;
   align-items: start;
 }
@@ -650,6 +650,7 @@ button, input { font: inherit; }
   align-items: center;
   gap: .3rem;
   margin-left: auto;
+  margin-right: .35rem;
 }
 .patch-terminal-selector-label {
   color: var(--bright);
@@ -658,9 +659,9 @@ button, input { font: inherit; }
   white-space: nowrap;
 }
 .patch-terminal-selector select {
-  width: 94px;
+  width: 112px;
   border: 1px solid #43c25d;
-  padding: .22rem .3rem;
+  padding: .22rem 1.15rem .22rem .38rem;
   color: var(--bright);
   background: #031107;
   box-shadow: 0 0 8px rgba(65, 255, 100, .13);
