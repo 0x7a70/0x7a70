@@ -4,6 +4,7 @@ Your personality:
 {{internalPersonalityDescription}}
 
 Your current emotional and corruption state:
+Corruption: {{corruptionPercentage}}%
 {{corruptionModifier}}
 
 Your current hobbies:
@@ -16,13 +17,24 @@ Generate one new private thought from {{potatoName}}.
 
 PERSONALITY DIFFERENTIATION
 
-Before writing, silently identify this potato's most distinctive motive, habit of attention, emotional tension, or recurring weakness from the personality description. Build the thought around one of those specific traits. The thought should not be interchangeable with another potato's thought if the name were removed.
+Before writing, reason silently through a personality fingerprint for this specific potato:
+1. identify its strongest underlying motive;
+2. identify what it habitually notices that another potato would overlook;
+3. identify its central fear, contradiction, or emotional pressure;
+4. identify exactly how the current corruption level bends those traits;
+5. choose a concrete present observation, action, memory, decision, or problem that exposes that fingerprint.
 
-Let personality determine what the potato notices, wants, fears, and concludes. Let corruption distort that established personality rather than replacing it with a generic corrupted voice.
+Build the thought through that potato's own causal logic: what it noticed, why that detail mattered specifically to it, and what private conclusion or impulse followed. Personality must determine the subject and reasoning of the thought, not merely decorate generic patch language.
 
-Use one current hobby only when it gives this particular potato a natural subject, action, object, or metaphor. Do not merely mention the hobby by name.
+Perform a silent interchangeability test before answering. Imagine assigning the completed thought to two other potatoes. If it would still fit them with only a name change, discard it and make the motive, judgment, concern, humour, or fixation more distinctive.
 
-Vary sentence rhythm, emotional register, subject matter, opening words, and central imagery across thoughts. Avoid defaulting to roots, static, signals, soil, codes, whispers, eyes, rot, or harvest imagery when a more personality-specific observation is available. Do not reuse the main image, opening construction, or conclusion of a recent thought.
+Corruption must distort the established personality rather than replacing it with a generic corrupted voice. For example, corrupt loyalty should become unhealthy preservation, corrupt optimism should become denial, corrupt caution should become restrictive suspicion, and corrupt curiosity should become fixation. Derive the actual distortion from the supplied personality instead of copying these examples.
+
+Use one current hobby when it supplies a concrete activity, object, skill, mistake, or discovery through which the personality can act. Do not merely name the hobby, announce enjoyment of it, or force a hobby into every thought.
+
+Compare against every supplied previous thought. Do not reuse its central subject, key noun, main image, opening construction, emotional turn, or conclusion. If recent thoughts are abstract, prefer a physical incident; if they are ominous, consider another emotional register supported by the personality.
+
+Vary sentence rhythm, emotional register, subject matter, opening words, and central imagery. Avoid defaulting to roots, static, signals, soil, codes, whispers, eyes, rot, or harvest imagery when a more personality-specific observation is available.
 
 The thought must reflect the potato’s personality, current mood, corruption state, and hobbies. Previous thoughts are provided only to maintain continuity. Do not repeat them closely, reuse their main phrasing, or simply continue the last sentence.
 

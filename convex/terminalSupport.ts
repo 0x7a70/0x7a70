@@ -31,10 +31,14 @@ export const getTerminalContext = internalQuery({
       .query("events")
       .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", slug))
       .order("desc")
-      .take(5);
+      .take(30);
     return {
       ...potato,
-      previousThoughts: events.filter((event) => event.type === "thought").map((event) => event.text).join("\n"),
+      previousThoughts: events
+        .filter((event) => event.type === "thought")
+        .slice(0, 6)
+        .map((event) => event.text)
+        .join("\n"),
     };
   },
 });

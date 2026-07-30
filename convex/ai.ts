@@ -23,6 +23,8 @@ type ChatMessage = {
   content: string;
 };
 
+type ReasoningEffort = "low" | "medium" | "high";
+
 function fill(template: string, values: Record<string, string | number>) {
   return Object.entries(values).reduce(
     (text, [key, value]) => text.replaceAll(`{{${key}}}`, String(value)),
@@ -40,7 +42,20 @@ function normalize(text: string, maxWords: number) {
     .trim();
 }
 
-async function openRouter(messages: ChatMessage[], maxTokens: number) {
+async function openRouter(
+  messages: ChatMessage[],
+  maxTokens: number,
+  options: {
+    reasoningEffort?: ReasoningEffort;
+    minimumCompletionTokens?: number;
+    timeoutMs?: number;
+  } = {},
+) {
+  const {
+    reasoningEffort = "low",
+    minimumCompletionTokens = 512,
+    timeoutMs = 30_000,
+  } = options;
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY is not configured");
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -58,14 +73,14 @@ async function openRouter(messages: ChatMessage[], maxTokens: number) {
       messages,
       // GPT-OSS counts its private reasoning against the completion limit.
       // Give it enough room to reason, then bound the visible text in normalize().
-      max_completion_tokens: Math.max(512, maxTokens * 4),
+      max_completion_tokens: Math.max(minimumCompletionTokens, maxTokens * 4),
       reasoning: {
-        effort: "low",
+        effort: reasoningEffort,
         exclude: true,
       },
       temperature: 0.7,
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
   const payload = await response.json() as {
@@ -105,12 +120,16 @@ export const prepareThought = internalMutation({
       .query("events")
       .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", potato.slug))
       .order("desc")
-      .take(5);
+      .take(30);
     return {
       skipped: false as const,
       prepared: {
         potato,
-        previousThoughts: events.filter((event) => event.type === "thought").map((event) => event.text).join("\n"),
+        previousThoughts: events
+          .filter((event) => event.type === "thought")
+          .slice(0, 6)
+          .map((event) => event.text)
+          .join("\n"),
       },
     };
   },
@@ -154,14 +173,19 @@ export const generateThought = internalAction({
       const prompt = fill(THOUGHT_PROMPT, {
         potatoName: prepared.potato.name,
         internalPersonalityDescription: PERSONALITIES[prepared.potato.name] || "",
+        corruptionPercentage: prepared.potato.corruption,
         corruptionModifier: corruptionModifier(prepared.potato.corruption),
-        currentHobbies: prepared.potato.hobbySlugs.join(", "),
+        currentHobbies: prepared.potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
         previousThoughts: prepared.previousThoughts || "None yet.",
       });
       const candidate = normalize(await openRouter([
         { role: "system", content: prompt },
         { role: "user", content: "Generate the single private thought now. Return only the thought." },
-      ], 80), 30);
+      ], 80, {
+        reasoningEffort: "high",
+        minimumCompletionTokens: 2_048,
+        timeoutMs: 45_000,
+      }), 30);
       const words = candidate.split(/\s+/).length;
       if (words >= 20 && words <= 30) thought = candidate;
     } catch (error) {
@@ -206,7 +230,7 @@ export const generateTerminalReply = action({
         internalPersonalityDescription: PERSONALITIES[potato.name] || "",
         corruptionPercentage: potato.corruption,
         corruptionModifier: corruptionModifier(potato.corruption),
-        currentHobbies: potato.hobbySlugs.join(", "),
+        currentHobbies: potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
         previousThoughts: potato.previousThoughts || "None available.",
         conversationHistory: args.conversationHistory.slice(-14_000) || "No previous conversation.",
         userInput: "The latest visitor message follows as the next user message.",
@@ -214,7 +238,11 @@ export const generateTerminalReply = action({
       const reply = normalize(await openRouter([
         { role: "system", content: systemPrompt },
         { role: "user", content: args.message },
-      ], 280), 150);
+      ], 280, {
+        reasoningEffort: "high",
+        minimumCompletionTokens: 2_048,
+        timeoutMs: 45_000,
+      }), 150);
       if (!reply) throw new Error("Empty reply");
       return { reply, timestamp: Date.now(), fallback: false };
     } catch (error) {
