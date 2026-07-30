@@ -470,14 +470,9 @@ button, input { font: inherit; }
   color: var(--dim); background: transparent; cursor: pointer;
 }
 .event-load-more {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
   display: block;
-  flex: 0 0 auto;
   margin-top: 0;
   background: #000;
-  box-shadow: 0 -8px 14px rgba(0, 0, 0, .88);
 }
 .plain-button:hover { color: var(--bright); background: rgba(65,255,100,.05); }
 
@@ -611,9 +606,7 @@ button, input { font: inherit; }
 }
 /* shared subterranean root map */
 .patch-main {
-  /* The generated network's main trunk is at 65% of its field. Offset that
-     coordinate to the actual viewport center, independently of sidebar width. */
-  --patch-field-shift: calc(50vw - 65%);
+  --patch-field-shift: 36px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(294px, 330px);
   gap: .35rem;
