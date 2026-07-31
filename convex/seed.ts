@@ -81,6 +81,24 @@ export const startXPosting = mutation({
   },
 });
 
+export const postXNow = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, { secret }) => {
+    assertSecret(secret);
+    const state = await ctx.db
+      .query("automationState")
+      .withIndex("by_key", (q) => q.eq("key", "main"))
+      .unique();
+    if (!state) throw new Error("Patch is not initialized.");
+
+    const delay = 1_000;
+    const nextXPostAt = Date.now() + delay;
+    await ctx.db.patch(state._id, { nextXPostAt });
+    await ctx.scheduler.runAfter(delay, internal.x.publishXPost);
+    return { scheduled: true, nextXPostAt };
+  },
+});
+
 export const status = mutation({
   args: { secret: v.string() },
   handler: async (ctx, { secret }) => {

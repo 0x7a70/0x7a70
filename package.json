@@ -14,6 +14,7 @@
     "seed": "node scripts/seed.mjs",
     "telegram:setup": "node scripts/setup-telegram.mjs",
     "x:start": "node scripts/start-x.mjs",
+    "x:now": "node scripts/start-x.mjs --now",
     "x:authorize": "node scripts/authorize-x.mjs",
     "deploy": "convex deploy --cmd \"npm run build\""
   },

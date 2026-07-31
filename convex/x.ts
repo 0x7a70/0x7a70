@@ -133,6 +133,9 @@ export const publishXPost = internalAction({
       corruptionModifier: corruptionModifier(prepared.potato.corruption),
       currentHobbies: prepared.potato.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
       creativeSeed: crypto.randomUUID(),
+      websiteInvitationMode: Math.random() < 0.2
+        ? "INVITATION REQUIRED. Include the exact URL 0x7a70.wiki once. Invite the reader for one specific, naturally integrated reason, such as meeting a particular potato, talking to a potato in the terminal, watching live corruption and hobbies change, reading transmissions, following hidden clues, investigating the first mystery, or seeing what grew while they were absent. Vary the reason and phrasing. Keep the invitation in character rather than sounding like an advertisement."
+        : "NO INVITATION. Do not include 0x7a70.wiki, any other URL, or a request to visit the website in this post.",
     });
 
     let text = "";
@@ -143,14 +146,14 @@ export const publishXPost = internalAction({
           { role: "user", content: attempt === 1 ? "Generate the post now." : `Attempt ${attempt}: produce a completely fresh post that satisfies every format rule.` },
         ], 160, {
           reasoningEffort: "high",
-          minimumCompletionTokens: 3_072,
-          timeoutMs: 45_000,
+          minimumCompletionTokens: 4_096,
+          timeoutMs: 60_000,
           providerSort: "throughput",
           temperature: 0.95,
         }));
         const words = candidate.split(/\s+/).filter(Boolean).length;
         const sections = candidate.split("\n\n").filter(Boolean).length;
-        if (words >= 20 && words <= 55 && sections >= 1 && sections <= 4 && candidate.length <= 270) {
+        if (words >= 30 && words <= 65 && sections >= 2 && sections <= 4 && candidate.length >= 180 && candidate.length <= 275) {
           text = candidate;
         } else {
           console.warn("x_generation_output_invalid", { attempt, words, sections, characters: candidate.length });

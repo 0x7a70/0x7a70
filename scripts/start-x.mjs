@@ -16,13 +16,14 @@ if (!secret) {
 
 const convexCli = path.resolve("node_modules", "convex", "bin", "main.js");
 const production = process.argv.includes("--prod");
+const postNow = process.argv.includes("--now");
 const result = spawnSync(
   process.execPath,
   [
     "--use-system-ca",
     convexCli,
     "run",
-    "seed:startXPosting",
+    postNow ? "seed:postXNow" : "seed:startXPosting",
     JSON.stringify({ secret }),
     ...(production ? ["--prod"] : []),
   ],
