@@ -26,6 +26,14 @@ type ChatMessage = {
 type ReasoningEffort = "low" | "medium" | "high";
 const THOUGHT_MAX_ATTEMPTS = 10;
 
+type OpenRouterPayload = {
+  error?: { code?: number; message?: string; metadata?: { error_type?: string } };
+  choices?: Array<{
+    finish_reason?: string;
+    message?: { content?: string | Array<{ type?: string; text?: string }> };
+  }>;
+};
+
 function fill(template: string, values: Record<string, string | number>) {
   return Object.entries(values).reduce(
     (text, [key, value]) => text.replaceAll(`{{${key}}}`, String(value)),
@@ -86,14 +94,17 @@ async function openRouter(
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
-  const payload = await response.json() as {
-    choices?: Array<{
-      finish_reason?: string;
-      message?: { content?: string };
-    }>;
-  };
-  const content = payload.choices?.[0]?.message?.content;
+  const payload = await response.json() as OpenRouterPayload;
+  if (!response.ok || payload.error) {
+    const code = payload.error?.code || response.status;
+    const type = payload.error?.metadata?.error_type || "unknown";
+    const message = payload.error?.message || response.statusText || "request failed";
+    throw new Error(`OpenRouter ${code} ${type}: ${message}`);
+  }
+  const rawContent = payload.choices?.[0]?.message?.content;
+  const content = typeof rawContent === "string"
+    ? rawContent
+    : rawContent?.map((part) => part.text || "").join("");
   if (!content) {
     throw new Error(`OpenRouter returned no text (finish: ${payload.choices?.[0]?.finish_reason || "unknown"})`);
   }
@@ -261,14 +272,18 @@ export const generateTerminalReply = action({
     });
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
+        // Preserve the full-quality first attempt. If that route fails, use a
+        // smaller reasoning budget and latency-first routing rather than
+        // repeating the same likely provider failure.
+        const recoveryAttempt = attempt > 1;
         const reply = normalize(await openRouter([
           { role: "system", content: systemPrompt },
           { role: "user", content: args.message },
         ], 280, {
-          reasoningEffort: "high",
-          minimumCompletionTokens: 1_536,
-          timeoutMs: 38_000,
-          providerSort: "throughput",
+          reasoningEffort: recoveryAttempt ? "medium" : "high",
+          minimumCompletionTokens: recoveryAttempt ? 1_024 : 1_536,
+          timeoutMs: recoveryAttempt ? 32_000 : 45_000,
+          providerSort: recoveryAttempt ? "latency" : "throughput",
         }), 150);
         if (!reply) throw new Error("Empty reply");
         return { reply, timestamp: Date.now(), fallback: false };
@@ -277,7 +292,7 @@ export const generateTerminalReply = action({
           attempt,
           message: error instanceof Error ? error.message : "unknown",
         });
-        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 350));
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 750));
       }
     }
     console.error("terminal_generation_failed", "no valid reply after 2 attempts");
