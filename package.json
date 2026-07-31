@@ -12,6 +12,7 @@
     "test": "vitest run",
     "convex:dev": "convex dev",
     "seed": "node scripts/seed.mjs",
+    "telegram:setup": "node scripts/setup-telegram.mjs",
     "deploy": "convex deploy --cmd \"npm run build\""
   },
   "dependencies": {

@@ -48,4 +48,24 @@ export default defineSchema({
     count: v.number(),
     lastRequestAt: v.number(),
   }).index("by_key", ["key"]),
+
+  telegramChats: defineTable({
+    chatId: v.string(),
+    type: v.string(),
+    title: v.optional(v.string()),
+    thoughtsEnabled: v.boolean(),
+    nextThoughtAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_chat_id", ["chatId"]),
+
+  telegramUpdates: defineTable({
+    updateId: v.string(),
+    chatId: v.optional(v.string()),
+    kind: v.string(),
+    status: v.string(),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_update_id", ["updateId"]),
 });

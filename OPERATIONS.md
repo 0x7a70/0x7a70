@@ -51,6 +51,37 @@ authentication, permission, and exhausted-credit errors stop retrying early.
 Rotate either secret by updating Convex and Vercel together, then redeploy.
 Existing terminal sessions may receive an in-world fallback during rotation.
 
+## Telegram bot
+
+The Telegram integration uses only `0x7a70`. It responds to every private text
+message and to group messages that mention the bot or reply directly to one of
+its messages. Telegram conversation history is not retained. New human group
+members receive an AI-generated welcome based on 0x7a70's live personality,
+corruption, and hobbies.
+
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` on the Convex deployment.
+Set `TELEGRAM_WEBHOOK_SECRET` and `CONVEX_SERVER_SECRET` in Vercel. The webhook
+secret must contain only letters, numbers, underscores, and hyphens. Keep the
+BotFather token out of Git and browser-visible environment variables.
+
+After deploying, register the production webhook from a trusted local shell:
+
+```powershell
+npm run telegram:setup -- https://your-production-domain.example
+```
+
+The script validates the token, registers `/api/telegram/webhook`, discards
+old pending updates, and prints the exact `TELEGRAM_BOT_USERNAME` value to set
+in Convex. Keep group privacy mode enabled in BotFather. Add the bot to the
+group and mention it once; the group is registered automatically with thought
+transmissions enabled. A dedicated 0x7a70 thought is then generated and sent
+every 10–15 minutes. The next execution is durably scheduled before generation,
+so a failed AI or Telegram request does not stop the loop.
+
+To stop group thoughts without removing the bot, set `thoughtsEnabled` to
+`false` for that chat in the `telegramChats` table. Removing the bot also
+disables the group when Telegram delivers the membership update.
+
 ## Deployment
 
 Vercel runs the configured Convex deployment command before the Next.js

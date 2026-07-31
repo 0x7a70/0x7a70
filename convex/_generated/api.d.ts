@@ -14,6 +14,7 @@ import type * as data from "../data.js";
 import type * as generatedContent from "../generatedContent.js";
 import type * as queries from "../queries.js";
 import type * as seed from "../seed.js";
+import type * as telegram from "../telegram.js";
 import type * as terminalSupport from "../terminalSupport.js";
 
 import type {
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   generatedContent: typeof generatedContent;
   queries: typeof queries;
   seed: typeof seed;
+  telegram: typeof telegram;
   terminalSupport: typeof terminalSupport;
 }>;
 

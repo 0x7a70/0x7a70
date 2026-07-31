@@ -34,14 +34,14 @@ type OpenRouterPayload = {
   }>;
 };
 
-function fill(template: string, values: Record<string, string | number>) {
+export function fill(template: string, values: Record<string, string | number>) {
   return Object.entries(values).reduce(
     (text, [key, value]) => text.replaceAll(`{{${key}}}`, String(value)),
     template,
   );
 }
 
-function normalize(text: string, maxWords: number) {
+export function normalize(text: string, maxWords: number) {
   return text
     .replace(/^["'\s]+|["'\s]+$/g, "")
     .replace(/\s+/g, " ")
@@ -51,7 +51,7 @@ function normalize(text: string, maxWords: number) {
     .trim();
 }
 
-async function openRouter(
+export async function openRouter(
   messages: ChatMessage[],
   maxTokens: number,
   options: {
