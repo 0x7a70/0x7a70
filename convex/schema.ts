@@ -39,8 +39,15 @@ export default defineSchema({
     nextCorruptionAt: v.optional(v.number()),
     nextHobbyAt: v.optional(v.number()),
     nextThoughtAt: v.optional(v.number()),
+    nextXPostAt: v.optional(v.number()),
     startedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  xPosts: defineTable({
+    postId: v.string(),
+    text: v.string(),
+    createdAt: v.number(),
+  }).index("by_created_at", ["createdAt"]),
 
   rateLimits: defineTable({
     key: v.string(),

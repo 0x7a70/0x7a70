@@ -60,6 +60,7 @@ export async function openRouter(
     minimumCompletionTokens?: number;
     timeoutMs?: number;
     providerSort?: "latency" | "throughput";
+    temperature?: number;
   } = {},
 ) {
   const {
@@ -67,6 +68,7 @@ export async function openRouter(
     minimumCompletionTokens = 512,
     timeoutMs = 30_000,
     providerSort,
+    temperature = 0.7,
   } = options;
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY is not configured");
@@ -91,7 +93,7 @@ export async function openRouter(
         exclude: true,
       },
       provider: providerSort ? { sort: providerSort } : undefined,
-      temperature: 0.7,
+      temperature,
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
