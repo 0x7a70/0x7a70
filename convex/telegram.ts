@@ -44,7 +44,7 @@ const TELEGRAM_THOUGHT_MAX_MINUTES = 60;
 const TELEGRAM_STICKER_MINUTES = 45;
 const TELEGRAM_STICKER_MAX_MINUTES = 60;
 const TELEGRAM_POST_SEPARATION_MINUTES = 15;
-const TELEGRAM_STICKER_CHANCE = 0.6;
+const TELEGRAM_STICKER_CHANCE = 1;
 const TELEGRAM_STICKER_SET = "Potato1670";
 
 function keepTelegramPostsOffset(delay: number, now: number, otherPostAt?: number) {
