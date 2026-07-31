@@ -110,3 +110,7 @@ Do not:
 Write exactly one thought containing 20 to 30 words.
 
 Return only the thought.
+
+PUNCTUATION
+
+Never use the em dash character (—). Use a comma, period, colon, semicolon, parentheses, or a plain hyphen instead.

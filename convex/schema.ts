@@ -55,6 +55,8 @@ export default defineSchema({
     title: v.optional(v.string()),
     thoughtsEnabled: v.boolean(),
     nextThoughtAt: v.optional(v.number()),
+    stickersEnabled: v.optional(v.boolean()),
+    nextStickerAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_chat_id", ["chatId"]),

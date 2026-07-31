@@ -41,6 +41,10 @@ type PotatoContext = {
 
 const TELEGRAM_THOUGHT_MINUTES = 10;
 const TELEGRAM_THOUGHT_MAX_MINUTES = 15;
+const TELEGRAM_STICKER_MINUTES = 14;
+const TELEGRAM_STICKER_MAX_MINUTES = 16;
+const TELEGRAM_STICKER_CHANCE = 0.6;
+const TELEGRAM_STICKER_SET = "Potato1670";
 
 function assertSecret(secret: string) {
   const expected = process.env.CONVEX_SERVER_SECRET;
@@ -108,7 +112,7 @@ async function generateReply(context: PotatoContext, message: string, conversati
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const reply = normalize(await openRouter([
-        { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. Never invent durations, countdowns, schedules, cycles, periodic resets, or numerical timing claims that were not explicitly supplied by the user or live project context. In particular, do not introduce a 12-hour cycle or any similar recurring interval unprompted. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag.` },
+        { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. Never invent durations, countdowns, schedules, cycles, periodic resets, or numerical timing claims that were not explicitly supplied by the user or live project context. In particular, do not introduce a 12-hour cycle or any similar recurring interval unprompted. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag. Never use the em dash character (—); choose other punctuation.` },
         { role: "user", content: message },
       ], 280, {
         reasoningEffort: "high",
@@ -127,8 +131,8 @@ async function generateReply(context: PotatoContext, message: string, conversati
   return "the root line folded before your message reached me. press the soil again.";
 }
 
-async function generateWelcome(context: PotatoContext, firstName: string) {
-  const system = `You are 0x7a70, a literal living potato in the potato patch.\n\nPersonality:\n${PERSONALITIES[context.name] || ""}\n\nCorruption: ${context.corruption}%\n${corruptionModifier(context.corruption)}\n\nCurrent hobbies: ${context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", ")}\n\nA human named ${firstName} has just entered your Telegram group. Welcome them directly in 15 to 35 words. Make this welcome feel like a fresh, specific reaction from 0x7a70's current personality rather than a reusable greeting. Vary its structure, emotional register, and central image. Do not default to saying that the roots noticed them, the soil remembers them, a signal arrived, or the patch opened an eye. Choose one distinctive curiosity, observation, invitation, warning, or understated joke, while making no unsupported claim about the new member. Be cryptic only as a light accent, sincere, and understandable. Do not include their name, a heading, quotation marks, markdown, or an @mention.`;
+async function generateWelcome(context: PotatoContext, firstName: string, username?: string) {
+  const system = `You are 0x7a70, a literal living potato in the potato patch.\n\nPersonality:\n${PERSONALITIES[context.name] || ""}\n\nCorruption: ${context.corruption}%\n${corruptionModifier(context.corruption)}\n\nCurrent hobbies: ${context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", ")}\n\nA human has just entered your Telegram group. Their displayed first name is ${firstName}.${username ? ` Their Telegram username is @${username}.` : " They have no supplied Telegram username."}\n\nWelcome them directly in 15 to 35 words. You may riff lightly on their displayed name or username when its spelling, meaning, sound, or imagery naturally suggests a distinctive welcome. Do not force wordplay, mock the name, infer identity or personal traits from it, or make unsupported claims about the new member. Their clickable mention will be placed before your generated text, so do not repeat the exact full name or @username in the response. Make this welcome feel like a fresh, specific reaction from 0x7a70's current personality rather than a reusable greeting. Vary its structure, emotional register, and central image. Do not default to saying that the roots noticed them, the soil remembers them, a signal arrived, or the patch opened an eye. Choose one distinctive curiosity, observation, invitation, warning, or understated joke. Be cryptic only as a light accent, sincere, and understandable. Do not include a heading, quotation marks, markdown, or an @mention. Never use the em dash character (—); choose other punctuation.`;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const welcome = normalize(await openRouter([
@@ -188,6 +192,8 @@ export const receiveUpdate = mutation({
           type: chat.type,
           title: chat.title,
           thoughtsEnabled: inactive ? false : stored.thoughtsEnabled,
+          stickersEnabled: inactive ? false : true,
+          ...(inactive ? { nextStickerAt: undefined } : {}),
           updatedAt: now,
         });
         if (!inactive && !stored.nextThoughtAt) {
@@ -195,18 +201,31 @@ export const receiveUpdate = mutation({
           await ctx.db.patch(stored._id, { nextThoughtAt: now + delay });
           await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId: String(chat.id) });
         }
+        if (!inactive && (!stored.nextStickerAt || stored.stickersEnabled === false)) {
+          const stickerDelay = randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES);
+          await ctx.db.patch(stored._id, {
+            stickersEnabled: true,
+            nextStickerAt: now + stickerDelay,
+            updatedAt: now,
+          });
+          await ctx.scheduler.runAfter(stickerDelay, internal.telegram.postRandomGroupSticker, { chatId: String(chat.id) });
+        }
       } else if (!inactive) {
         const delay = randomDelay(TELEGRAM_THOUGHT_MINUTES, TELEGRAM_THOUGHT_MAX_MINUTES);
+        const stickerDelay = randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES);
         await ctx.db.insert("telegramChats", {
           chatId: String(chat.id),
           type: chat.type,
           title: chat.title,
           thoughtsEnabled: true,
           nextThoughtAt: now + delay,
+          stickersEnabled: true,
+          nextStickerAt: now + stickerDelay,
           createdAt: now,
           updatedAt: now,
         });
         await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId: String(chat.id) });
+        await ctx.scheduler.runAfter(stickerDelay, internal.telegram.postRandomGroupSticker, { chatId: String(chat.id) });
       }
     }
 
@@ -381,7 +400,7 @@ export const processWelcome = internalAction({
     try {
       const context = await ctx.runQuery(internal.terminalSupport.getTerminalContext, { slug: "0x7a70" }) as PotatoContext | null;
       if (!context) throw new Error("0x7a70 is not initialized");
-      const welcome = await generateWelcome(context, args.firstName);
+      const welcome = await generateWelcome(context, args.firstName, args.username);
       const label = args.username ? `@${htmlEscape(args.username)}` : htmlEscape(args.firstName);
       const mention = `<a href="tg://user?id=${args.userId}">${label}</a>`;
       await telegramRequest("sendMessage", {
@@ -494,6 +513,56 @@ export const generateGroupThought = internalAction({
     } catch (error) {
       console.error("telegram_thought_send_failed", {
         chatId,
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  },
+});
+
+export const prepareGroupSticker = internalMutation({
+  args: { chatId: v.string() },
+  handler: async (ctx, { chatId }) => {
+    const chat = await ctx.db
+      .query("telegramChats")
+      .withIndex("by_chat_id", (q) => q.eq("chatId", chatId))
+      .unique();
+    if (!chat || chat.stickersEnabled === false) return false;
+
+    const now = Date.now();
+    if (chat.nextStickerAt && now < chat.nextStickerAt - 5_000) return false;
+
+    // Commit the next run before attempting Telegram so one failed request can
+    // never stop the durable loop.
+    const delay = randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES);
+    await ctx.db.patch(chat._id, {
+      stickersEnabled: true,
+      nextStickerAt: now + delay,
+      updatedAt: now,
+    });
+    await ctx.scheduler.runAfter(delay, internal.telegram.postRandomGroupSticker, { chatId });
+    return Math.random() < TELEGRAM_STICKER_CHANCE;
+  },
+});
+
+export const postRandomGroupSticker = internalAction({
+  args: { chatId: v.string() },
+  handler: async (ctx, { chatId }) => {
+    const shouldPost = await ctx.runMutation(internal.telegram.prepareGroupSticker, { chatId });
+    if (!shouldPost) return;
+
+    try {
+      const stickerSet = await telegramRequest("getStickerSet", { name: TELEGRAM_STICKER_SET }) as unknown as {
+        stickers?: Array<{ file_id?: string }>;
+      };
+      const stickers = (stickerSet.stickers || []).filter((sticker) => Boolean(sticker.file_id));
+      if (!stickers.length) throw new Error(`Telegram sticker set ${TELEGRAM_STICKER_SET} is empty`);
+      const sticker = stickers[Math.floor(Math.random() * stickers.length)]?.file_id;
+      if (!sticker) throw new Error("Unable to select a Telegram sticker");
+      await telegramRequest("sendSticker", { chat_id: chatId, sticker });
+    } catch (error) {
+      console.error("telegram_sticker_send_failed", {
+        chatId,
+        stickerSet: TELEGRAM_STICKER_SET,
         message: error instanceof Error ? error.message : "unknown",
       });
     }

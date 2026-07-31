@@ -43,6 +43,7 @@ export function fill(template: string, values: Record<string, string | number>) 
 
 export function normalize(text: string, maxWords: number) {
   return text
+    .replaceAll("—", ",")
     .replace(/^["'\s]+|["'\s]+$/g, "")
     .replace(/\s+/g, " ")
     .split(" ")
