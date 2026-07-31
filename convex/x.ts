@@ -3,11 +3,12 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation } from "./_generated/server";
 import { fill, openRouter } from "./ai";
 import { corruptionModifier, randomDelay } from "./data";
-import { PERSONALITIES, X_POST_PROMPT } from "./generatedContent";
+import { PERSONALITIES, X_ASCII_ART, X_POST_PROMPT } from "./generatedContent";
 
 const X_POST_MINUTES = 120;
 const X_POST_MAX_MINUTES = 150;
 const X_POST_URL = "https://api.x.com/2/tweets";
+const ASCII_POST_CHANCE = 0.2;
 
 function normalizeXPost(value: string) {
   return value
@@ -109,14 +110,42 @@ export const prepareXPost = internalMutation({
       .withIndex("by_slug", (q) => q.eq("slug", "0x7a70"))
       .unique();
     if (!potato) return null;
-    return { potato };
+
+    let asciiArt: { id: string; text: string } | null = null;
+    if (Math.random() < ASCII_POST_CHANCE) {
+      const usage = await ctx.db.query("xAsciiUsage").collect();
+      const counts = new Map(usage.map((entry) => [entry.asciiArtId, entry.postCount]));
+      const minimumCount = Math.min(...X_ASCII_ART.map((art) => counts.get(art.id) || 0));
+      const available = X_ASCII_ART.filter((art) => (counts.get(art.id) || 0) === minimumCount);
+      asciiArt = available[Math.floor(Math.random() * available.length)] || null;
+    }
+
+    return { potato, asciiArt };
   },
 });
 
 export const recordXPost = internalMutation({
-  args: { postId: v.string(), text: v.string() },
+  args: { postId: v.string(), text: v.string(), asciiArtId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.insert("xPosts", { ...args, createdAt: Date.now() });
+    if (args.asciiArtId) {
+      const existing = await ctx.db
+        .query("xAsciiUsage")
+        .withIndex("by_ascii_art_id", (q) => q.eq("asciiArtId", args.asciiArtId!))
+        .unique();
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          postCount: existing.postCount + 1,
+          lastPostedAt: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("xAsciiUsage", {
+          asciiArtId: args.asciiArtId,
+          postCount: 1,
+          lastPostedAt: Date.now(),
+        });
+      }
+    }
   },
 });
 
@@ -125,6 +154,23 @@ export const publishXPost = internalAction({
   handler: async (ctx) => {
     const prepared = await ctx.runMutation(internal.x.prepareXPost);
     if (!prepared) return;
+
+    if (prepared.asciiArt) {
+      try {
+        const posted = await publishToX(prepared.asciiArt.text);
+        await ctx.runMutation(internal.x.recordXPost, {
+          postId: posted.id,
+          text: posted.text,
+          asciiArtId: prepared.asciiArt.id,
+        });
+      } catch (error) {
+        console.error("x_ascii_publish_failed", {
+          asciiArtId: prepared.asciiArt.id,
+          message: error instanceof Error ? error.message : "unknown",
+        });
+      }
+      return;
+    }
 
     const prompt = fill(X_POST_PROMPT, {
       potatoName: prepared.potato.name,

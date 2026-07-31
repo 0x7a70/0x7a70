@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { fill, normalize, openRouter } from "./ai";
 import { corruptionModifier, randomDelay } from "./data";
-import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT } from "./generatedContent";
+import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT, X_ASCII_ART } from "./generatedContent";
 
 type TelegramUser = {
   id: number;
@@ -46,6 +46,7 @@ const TELEGRAM_STICKER_MAX_MINUTES = 60;
 const TELEGRAM_POST_SEPARATION_MINUTES = 15;
 const TELEGRAM_STICKER_CHANCE = 1;
 const TELEGRAM_STICKER_SET = "Potato1670";
+const TELEGRAM_ASCII_CHANCE = 0.2;
 
 function keepTelegramPostsOffset(delay: number, now: number, otherPostAt?: number) {
   if (!otherPostAt) return delay;
@@ -456,6 +457,10 @@ export const prepareGroupThought = internalMutation({
     await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId });
     const context = await ctx.db.query("potatoes").withIndex("by_slug", (q) => q.eq("slug", "0x7a70")).unique();
     if (!context) return null;
+    if (Math.random() < TELEGRAM_ASCII_CHANCE) {
+      const asciiArt = X_ASCII_ART[Math.floor(Math.random() * X_ASCII_ART.length)];
+      return { context, previousThoughts: "", asciiText: asciiArt?.text || null };
+    }
     const events = await ctx.db
       .query("events")
       .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", "0x7a70"))
@@ -464,6 +469,7 @@ export const prepareGroupThought = internalMutation({
     return {
       context,
       previousThoughts: events.filter((event) => event.type === "thought").slice(0, 6).map((event) => event.text).join("\n"),
+      asciiText: null,
     };
   },
 });
@@ -486,6 +492,17 @@ export const generateGroupThought = internalAction({
   handler: async (ctx, { chatId }) => {
     const prepared = await ctx.runMutation(internal.telegram.prepareGroupThought, { chatId });
     if (!prepared) return;
+    if (prepared.asciiText) {
+      try {
+        await telegramRequest("sendMessage", { chat_id: chatId, text: prepared.asciiText });
+      } catch (error) {
+        console.error("telegram_ascii_send_failed", {
+          chatId,
+          message: error instanceof Error ? error.message : "unknown",
+        });
+      }
+      return;
+    }
     const prompt = fill(THOUGHT_PROMPT, {
       potatoName: prepared.context.name,
       internalPersonalityDescription: PERSONALITIES[prepared.context.name] || "",

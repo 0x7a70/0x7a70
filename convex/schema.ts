@@ -46,8 +46,15 @@ export default defineSchema({
   xPosts: defineTable({
     postId: v.string(),
     text: v.string(),
+    asciiArtId: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_created_at", ["createdAt"]),
+
+  xAsciiUsage: defineTable({
+    asciiArtId: v.string(),
+    postCount: v.number(),
+    lastPostedAt: v.number(),
+  }).index("by_ascii_art_id", ["asciiArtId"]),
 
   rateLimits: defineTable({
     key: v.string(),
