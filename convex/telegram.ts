@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction, internalMutation, mutation } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { fill, normalize, openRouter } from "./ai";
 import { corruptionModifier, randomDelay } from "./data";
 import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT } from "./generatedContent";
@@ -94,7 +94,7 @@ async function telegramRequest(method: string, body: Record<string, unknown>) {
   return payload.result;
 }
 
-async function generateReply(context: PotatoContext, message: string) {
+async function generateReply(context: PotatoContext, message: string, conversationHistory: string) {
   const prompt = fill(TERMINAL_PROMPT, {
     potatoName: context.name,
     internalPersonalityDescription: PERSONALITIES[context.name] || "",
@@ -102,18 +102,18 @@ async function generateReply(context: PotatoContext, message: string) {
     corruptionModifier: corruptionModifier(context.corruption),
     currentHobbies: context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
     previousThoughts: context.previousThoughts || "None available.",
-    conversationHistory: "No previous conversation is retained for Telegram.",
+    conversationHistory: conversationHistory || "No previous conversation is available.",
     userInput: "The latest Telegram message follows as the next user message.",
   });
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const reply = normalize(await openRouter([
-        { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. Do not include a name label or mention tag.` },
+        { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag.` },
         { role: "user", content: message },
       ], 280, {
-        reasoningEffort: attempt === 1 ? "high" : "medium",
-        minimumCompletionTokens: attempt === 1 ? 1_536 : 1_024,
-        timeoutMs: attempt === 1 ? 45_000 : 32_000,
+        reasoningEffort: "high",
+        minimumCompletionTokens: attempt === 1 ? 2_048 : 1_536,
+        timeoutMs: attempt === 1 ? 50_000 : 40_000,
         providerSort: attempt === 1 ? "throughput" : "latency",
       }), 150);
       if (reply) return reply;
@@ -272,6 +272,50 @@ export const finishUpdate = internalMutation({
   },
 });
 
+export const getConversation = internalQuery({
+  args: { key: v.string() },
+  handler: async (ctx, { key }) => {
+    const record = await ctx.db
+      .query("telegramConversations")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+    if (!record) return "";
+    return record.turns
+      .map((turn) => `${turn.role}: ${turn.text}`)
+      .join("\n")
+      .split(/\s+/)
+      .slice(-1_200)
+      .join(" ");
+  },
+});
+
+export const rememberExchange = internalMutation({
+  args: {
+    key: v.string(),
+    userMessage: v.string(),
+    potatoReply: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("telegramConversations")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    const now = Date.now();
+    const additions = [
+      { role: "user" as const, text: args.userMessage, createdAt: now },
+      { role: "potato" as const, text: args.potatoReply, createdAt: now },
+    ];
+    // Six exchanges are enough for gentle continuity without allowing old
+    // subjects to dominate the current message.
+    const turns = [...(existing?.turns || []), ...additions].slice(-12);
+    if (existing) {
+      await ctx.db.patch(existing._id, { turns, updatedAt: now });
+    } else {
+      await ctx.db.insert("telegramConversations", { key: args.key, turns, updatedAt: now });
+    }
+  },
+});
+
 export const processIncoming = internalAction({
   args: {
     updateId: v.string(),
@@ -300,12 +344,19 @@ export const processIncoming = internalAction({
       }
       const context = await ctx.runQuery(internal.terminalSupport.getTerminalContext, { slug: "0x7a70" }) as PotatoContext | null;
       if (!context) throw new Error("0x7a70 is not initialized");
-      const reply = await generateReply(context, args.text);
+      const conversationKey = `${args.chatId}:${args.userId}`;
+      const conversationHistory = await ctx.runQuery(internal.telegram.getConversation, { key: conversationKey });
+      const reply = await generateReply(context, args.text, conversationHistory);
       await telegramRequest("sendMessage", {
         chat_id: args.chatId,
         text: reply,
         reply_parameters: { message_id: args.messageId },
         ...(args.threadId ? { message_thread_id: args.threadId } : {}),
+      });
+      await ctx.runMutation(internal.telegram.rememberExchange, {
+        key: conversationKey,
+        userMessage: args.text,
+        potatoReply: reply,
       });
       await ctx.runMutation(internal.telegram.finishUpdate, { updateId: args.updateId, status: "sent" });
     } catch (error) {

@@ -21,6 +21,8 @@ export const LOOP_WORDS = [
 export const CONTRACT = "0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f";
 export const TOKEN_URL = `https://potato.fm/token/${CONTRACT}`;
 export const X_URL = "https://x.com/0x7a70";
+export const TELEGRAM_GROUP_URL = "https://t.me/tg0x7a70";
+export const TELEGRAM_BOT_URL = "https://t.me/the0x7a70bot";
 export const CONVEX_URL = "https://insightful-chihuahua-895.convex.cloud";
 
 export function slugify(value: string) {

@@ -68,4 +68,14 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_update_id", ["updateId"]),
+
+  telegramConversations: defineTable({
+    key: v.string(),
+    turns: v.array(v.object({
+      role: v.union(v.literal("user"), v.literal("potato")),
+      text: v.string(),
+      createdAt: v.number(),
+    })),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

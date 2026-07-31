@@ -55,9 +55,10 @@ Existing terminal sessions may receive an in-world fallback during rotation.
 
 The Telegram integration uses only `0x7a70`. It responds to every private text
 message and to group messages that mention the bot or reply directly to one of
-its messages. Telegram conversation history is not retained. New human group
-members receive an AI-generated welcome based on 0x7a70's live personality,
-corruption, and hobbies.
+its messages. It retains at most six exchanges per user and chat as lightly
+weighted continuity; the newest message always controls the response. New human
+group members receive an AI-generated welcome based on 0x7a70's live
+personality, corruption, and hobbies.
 
 Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` on the Convex deployment.
 Set `TELEGRAM_WEBHOOK_SECRET` and `CONVEX_SERVER_SECRET` in Vercel. The webhook

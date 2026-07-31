@@ -117,7 +117,7 @@ button, input { font: inherit; }
   border-bottom: 1px solid var(--line); background: #000; backdrop-filter: blur(8px);
 }
 .site-header nav { display: flex; align-items: center; width: 100%; gap: 1.15rem; }
-.site-header nav a:not(.header-contract) {
+.site-header nav a:not(.header-contract):not(.header-bot-link) {
   display: grid;
   place-items: center;
   opacity: .96;
@@ -129,7 +129,7 @@ button, input { font: inherit; }
     brightness(2.1);
   transition: opacity .2s, filter .2s;
 }
-.site-header nav a:not(.header-contract):hover {
+.site-header nav a:not(.header-contract):not(.header-bot-link):hover {
   opacity: 1;
   filter:
     grayscale(0)
@@ -139,6 +139,14 @@ button, input { font: inherit; }
     brightness(2.45);
 }
 .header-contract { margin-right: auto; color: var(--dim); font-size: clamp(.52rem, .85vw, .72rem); letter-spacing: .035em; }
+.header-bot-link {
+  color: var(--dim);
+  font-size: clamp(.58rem, .9vw, .76rem);
+  letter-spacing: .08em;
+  white-space: nowrap;
+  transition: color .2s, text-shadow .2s;
+}
+.header-bot-link:hover { color: var(--bright); text-shadow: 0 0 7px rgba(105, 255, 132, .35); }
 .patch-page, .detail-page { min-height: 100vh; overflow: hidden; position: relative; }
 .patch-page {
   background: #000;
@@ -682,6 +690,8 @@ button, input { font: inherit; }
 }
 .patch-page .site-header nav { gap: .75rem; }
 .patch-page .site-header .header-contract { font-size: .58rem; }
+.patch-page .site-header .header-bot-link { font-size: .62rem; }
+.patch-page .site-header .header-telegram-icon img { width: 29px; height: 29px; }
 .patch-page .site-header .header-x-icon img { width: 27px; height: 27px; }
 .patch-page .site-header .header-potato-icon img { width: 34px; height: 34px; }
 .patch-page .patch-shell { padding-top: .45rem; }
@@ -1019,6 +1029,12 @@ button, input { font: inherit; }
     font-size: clamp(1rem, 5vw, 1.45rem);
     letter-spacing: -.055em;
     white-space: nowrap;
+  }
+  .site-header nav { gap: .7rem; }
+  .site-header .header-bot-link { font-size: .55rem; letter-spacing: .045em; }
+  .site-header .header-telegram-icon img {
+    width: 27px;
+    height: 27px;
   }
   .site-header .header-x-icon img {
     width: 25px;
