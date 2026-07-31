@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { TELEGRAM_BOT_URL, TOKEN_URL, X_URL } from "@/lib/constants";
+import { TELEGRAM_BOT_URL, TELEGRAM_GROUP_URL, TOKEN_URL, X_URL } from "@/lib/constants";
 
 export function SiteHeader() {
   return (
@@ -11,7 +11,7 @@ export function SiteHeader() {
         <a className="header-bot-link" href={TELEGRAM_BOT_URL} target="_blank" rel="noreferrer">
           0x7a70bot
         </a>
-        <a className="header-telegram-icon" href={TELEGRAM_BOT_URL} target="_blank" rel="noreferrer" aria-label="Talk to the 0x7a70 Telegram bot">
+        <a className="header-telegram-icon" href={TELEGRAM_GROUP_URL} target="_blank" rel="noreferrer" aria-label="Join the 0x7a70 Telegram group">
           <Image src="/telegram.png?v=20260731a" width={36} height={36} alt="" />
         </a>
         <a className="header-x-icon" href={X_URL} target="_blank" rel="noreferrer" aria-label="0x7a70 on X">

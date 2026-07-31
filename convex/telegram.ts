@@ -108,7 +108,7 @@ async function generateReply(context: PotatoContext, message: string, conversati
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const reply = normalize(await openRouter([
-        { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag.` },
+        { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. Never invent durations, countdowns, schedules, cycles, periodic resets, or numerical timing claims that were not explicitly supplied by the user or live project context. In particular, do not introduce a 12-hour cycle or any similar recurring interval unprompted. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag.` },
         { role: "user", content: message },
       ], 280, {
         reasoningEffort: "high",
@@ -128,7 +128,7 @@ async function generateReply(context: PotatoContext, message: string, conversati
 }
 
 async function generateWelcome(context: PotatoContext, firstName: string) {
-  const system = `You are 0x7a70, a literal living potato in the potato patch.\n\nPersonality:\n${PERSONALITIES[context.name] || ""}\n\nCorruption: ${context.corruption}%\n${corruptionModifier(context.corruption)}\n\nCurrent hobbies: ${context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", ")}\n\nA human named ${firstName} has just entered your Telegram group. Welcome them directly in 15 to 35 words. Be cryptic, sincere, distinctly 0x7a70, and understandable. Do not include their name, a heading, quotation marks, markdown, or an @mention. Do not claim to know anything about them.`;
+  const system = `You are 0x7a70, a literal living potato in the potato patch.\n\nPersonality:\n${PERSONALITIES[context.name] || ""}\n\nCorruption: ${context.corruption}%\n${corruptionModifier(context.corruption)}\n\nCurrent hobbies: ${context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", ")}\n\nA human named ${firstName} has just entered your Telegram group. Welcome them directly in 15 to 35 words. Make this welcome feel like a fresh, specific reaction from 0x7a70's current personality rather than a reusable greeting. Vary its structure, emotional register, and central image. Do not default to saying that the roots noticed them, the soil remembers them, a signal arrived, or the patch opened an eye. Choose one distinctive curiosity, observation, invitation, warning, or understated joke, while making no unsupported claim about the new member. Be cryptic only as a light accent, sincere, and understandable. Do not include their name, a heading, quotation marks, markdown, or an @mention.`;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const welcome = normalize(await openRouter([
@@ -451,7 +451,8 @@ export const generateGroupThought = internalAction({
       previousThoughts: prepared.previousThoughts || "None yet.",
     });
     let thought = "";
-    for (let attempt = 1; attempt <= 3 && !thought; attempt += 1) {
+    const maxAttempts = 10;
+    for (let attempt = 1; attempt <= maxAttempts && !thought; attempt += 1) {
       try {
         const candidate = normalize(await openRouter([
           { role: "system", content: prompt },
@@ -463,15 +464,27 @@ export const generateGroupThought = internalAction({
           providerSort: attempt === 1 ? "throughput" : "latency",
         }), 30);
         const words = candidate ? candidate.split(/\s+/).length : 0;
-        if (words >= 20 && words <= 30) thought = candidate;
+        if (words >= 20 && words <= 30) {
+          thought = candidate;
+        } else {
+          console.warn("telegram_thought_output_invalid", { attempt, words });
+        }
       } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown";
         console.error("telegram_thought_generation_attempt_failed", {
           attempt,
-          message: error instanceof Error ? error.message : "unknown",
+          message,
         });
+        if (/\b(401|402|403)\b/.test(message)) break;
+      }
+      if (!thought && attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(3_000, 500 * attempt)));
       }
     }
-    if (!thought) return;
+    if (!thought) {
+      console.error("telegram_thought_generation_failed", `no valid output after ${maxAttempts} attempts`);
+      return;
+    }
     try {
       await telegramRequest("sendMessage", {
         chat_id: chatId,

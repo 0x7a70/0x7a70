@@ -50,6 +50,10 @@ Compare against every supplied previous thought. Do not reuse its central subjec
 
 Vary sentence rhythm, emotional register, subject matter, opening words, and central imagery. Avoid defaulting to roots, static, signals, soil, codes, whispers, eyes, rot, or harvest imagery when a more personality-specific observation is available.
 
+UNIQUENESS TEST
+
+Do not rely on a reusable "potato patch thought" template. Avoid stock constructions such as announcing that something whispered, claiming that an ordinary object remembers, describing an unexplained signal, or ending with a vague ominous reversal unless this potato's current personality and situation genuinely require it. Select a specific opinion, small incident, mistake, desire, irritation, joke, decision, bodily sensation, or observation that this potato has not recently used. Let the personality create a distinctive subject and conclusion rather than merely changing the imagery around the same abstract thought. Prefer surprising specificity over generalized mystery. A coherent mundane thought expressed by an unusual potato is often more distinctive than another cryptic warning.
+
 The thought must reflect the potato’s personality, current mood, corruption state, and hobbies. Previous thoughts are provided only to maintain continuity. Do not repeat them closely, reuse their main phrasing, or simply continue the last sentence.
 
 STYLE INSTRUCTIONS
