@@ -39,12 +39,21 @@ type PotatoContext = {
   previousThoughts: string;
 };
 
-const TELEGRAM_THOUGHT_MINUTES = 10;
-const TELEGRAM_THOUGHT_MAX_MINUTES = 15;
-const TELEGRAM_STICKER_MINUTES = 14;
-const TELEGRAM_STICKER_MAX_MINUTES = 16;
+const TELEGRAM_THOUGHT_MINUTES = 45;
+const TELEGRAM_THOUGHT_MAX_MINUTES = 60;
+const TELEGRAM_STICKER_MINUTES = 45;
+const TELEGRAM_STICKER_MAX_MINUTES = 60;
+const TELEGRAM_POST_SEPARATION_MINUTES = 15;
 const TELEGRAM_STICKER_CHANCE = 0.6;
 const TELEGRAM_STICKER_SET = "Potato1670";
+
+function keepTelegramPostsOffset(delay: number, now: number, otherPostAt?: number) {
+  if (!otherPostAt) return delay;
+  const minimumSeparation = TELEGRAM_POST_SEPARATION_MINUTES * 60_000;
+  const proposedAt = now + delay;
+  if (Math.abs(proposedAt - otherPostAt) >= minimumSeparation) return delay;
+  return Math.max(1_000, otherPostAt + minimumSeparation - now);
+}
 
 function assertSecret(secret: string) {
   const expected = process.env.CONVEX_SERVER_SECRET;
@@ -197,12 +206,20 @@ export const receiveUpdate = mutation({
           updatedAt: now,
         });
         if (!inactive && !stored.nextThoughtAt) {
-          const delay = randomDelay(TELEGRAM_THOUGHT_MINUTES, TELEGRAM_THOUGHT_MAX_MINUTES);
+          const delay = keepTelegramPostsOffset(
+            randomDelay(TELEGRAM_THOUGHT_MINUTES, TELEGRAM_THOUGHT_MAX_MINUTES),
+            now,
+            stored.nextStickerAt,
+          );
           await ctx.db.patch(stored._id, { nextThoughtAt: now + delay });
           await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId: String(chat.id) });
         }
         if (!inactive && (!stored.nextStickerAt || stored.stickersEnabled === false)) {
-          const stickerDelay = randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES);
+          const stickerDelay = keepTelegramPostsOffset(
+            randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES),
+            now,
+            stored.nextThoughtAt,
+          );
           await ctx.db.patch(stored._id, {
             stickersEnabled: true,
             nextStickerAt: now + stickerDelay,
@@ -212,7 +229,11 @@ export const receiveUpdate = mutation({
         }
       } else if (!inactive) {
         const delay = randomDelay(TELEGRAM_THOUGHT_MINUTES, TELEGRAM_THOUGHT_MAX_MINUTES);
-        const stickerDelay = randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES);
+        const stickerDelay = keepTelegramPostsOffset(
+          randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES),
+          now,
+          now + delay,
+        );
         await ctx.db.insert("telegramChats", {
           chatId: String(chat.id),
           type: chat.type,
@@ -426,7 +447,11 @@ export const prepareGroupThought = internalMutation({
     if (!chat || !chat.thoughtsEnabled) return null;
     const now = Date.now();
     if (chat.nextThoughtAt && now < chat.nextThoughtAt - 5_000) return null;
-    const delay = randomDelay(TELEGRAM_THOUGHT_MINUTES, TELEGRAM_THOUGHT_MAX_MINUTES);
+    const delay = keepTelegramPostsOffset(
+      randomDelay(TELEGRAM_THOUGHT_MINUTES, TELEGRAM_THOUGHT_MAX_MINUTES),
+      now,
+      chat.nextStickerAt,
+    );
     await ctx.db.patch(chat._id, { nextThoughtAt: now + delay, updatedAt: now });
     await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId });
     const context = await ctx.db.query("potatoes").withIndex("by_slug", (q) => q.eq("slug", "0x7a70")).unique();
@@ -507,7 +532,7 @@ export const generateGroupThought = internalAction({
     try {
       await telegramRequest("sendMessage", {
         chat_id: chatId,
-        text: `0x7a70 // ${prepared.context.corruption}% corruption\n\n${thought}`,
+        text: thought,
       });
       await ctx.runMutation(internal.telegram.storeTelegramThought, { thought });
     } catch (error) {
@@ -533,7 +558,11 @@ export const prepareGroupSticker = internalMutation({
 
     // Commit the next run before attempting Telegram so one failed request can
     // never stop the durable loop.
-    const delay = randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES);
+    const delay = keepTelegramPostsOffset(
+      randomDelay(TELEGRAM_STICKER_MINUTES, TELEGRAM_STICKER_MAX_MINUTES),
+      now,
+      chat.nextThoughtAt,
+    );
     await ctx.db.patch(chat._id, {
       stickersEnabled: true,
       nextStickerAt: now + delay,
