@@ -23,6 +23,16 @@ if (!token || !secret || !site) {
   process.exit(1);
 }
 
+let siteUrl;
+try {
+  siteUrl = new URL(site);
+  if (siteUrl.protocol !== "https:") throw new Error("HTTPS is required");
+} catch {
+  console.error(`Invalid production site URL: ${site}`);
+  console.error("Use a single HTTPS address, for example https://www.0x7a70.wiki");
+  process.exit(1);
+}
+
 const base = `https://api.telegram.org/bot${token}`;
 const meResponse = await fetch(`${base}/getMe`);
 const me = await meResponse.json();
@@ -31,7 +41,8 @@ if (!me.ok) {
   process.exit(1);
 }
 
-const webhookUrl = `${site.replace(/\/$/, "")}/api/telegram/webhook`;
+const webhookUrl = new URL("/api/telegram/webhook", siteUrl).toString();
+console.log(`Registering webhook: ${webhookUrl}`);
 const webhookResponse = await fetch(`${base}/setWebhook`, {
   method: "POST",
   headers: { "content-type": "application/json" },
