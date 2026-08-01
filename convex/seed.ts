@@ -44,7 +44,7 @@ export const initialize = mutation({
     const corruptionDelay = randomDelayAtFrequency(3, 7, PATCH_CHANGE_FREQUENCY);
     const hobbyDelay = randomDelayAtFrequency(5, 9, PATCH_CHANGE_FREQUENCY);
     const thoughtDelay = randomThoughtDelay();
-    const xPostDelay = randomDelay(120, 150);
+    const xPostDelay = randomDelay(240, 255);
     await ctx.db.insert("automationState", {
       key: "main",
       startedAt: now,
@@ -75,7 +75,7 @@ export const startXPosting = mutation({
     if (state.nextXPostAt && state.nextXPostAt > now) {
       return { started: false, message: "X posting is already scheduled.", nextXPostAt: state.nextXPostAt };
     }
-    const delay = randomDelay(120, 150);
+    const delay = randomDelay(240, 255);
     const nextXPostAt = now + delay;
     await ctx.db.patch(state._id, { nextXPostAt });
     await ctx.scheduler.runAfter(delay, internal.x.publishXPost, {});

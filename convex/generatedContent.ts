@@ -147,6 +147,6 @@ export const X_ASCII_ART: ReadonlyArray<{ id: string; text: string }> = [
   },
   {
     "id": "hobby-woodworking",
-    "text": "⁠    |||||||\n    /_______\\\n ====[_______]====\n    /  saw  /\n   /_/\\/\\_/\n  ______________\n | grain/////// |\n |______________|"
+    "text": "⁠    |||||||\n    /_______\\\n ====[_______]====\n    /  saw  /\n   /_/\\/\\_/\n  ______________\n  | grain/////// |\n  |______________|"
   }
 ];

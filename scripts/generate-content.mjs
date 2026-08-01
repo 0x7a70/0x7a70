@@ -79,7 +79,8 @@ const hobbyViewSource = fs.readFileSync(path.join(root, "components", "HobbyView
 const hobbyObject = hobbyViewSource.match(/const HOBBY_ASCII:[\s\S]*?= \{([\s\S]*?)\n\};/)?.[1];
 if (!hobbyObject) throw new Error("Could not locate hobby ASCII");
 const hobbyArt = [...hobbyObject.matchAll(/\s*(?:"([^"]+)"|([a-z][a-z-]*)):\s*`([\s\S]*?)`,/g)]
-  .map((match) => ({ id: `hobby-${match[1] || match[2]}`, text: formatForSocial(decodeTemplateArt(match[3])) }));
+  .map((match) => ({ id: `hobby-${match[1] || match[2]}`, text: formatForSocial(decodeTemplateArt(match[3])) }))
+  .filter((art) => art.id !== "hobby-despair");
 if (hobbyArt.length !== 20) throw new Error(`Expected 20 hobby ASCII pieces, found ${hobbyArt.length}`);
 
 const xAsciiArt = [

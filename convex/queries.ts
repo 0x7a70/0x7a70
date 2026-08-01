@@ -24,6 +24,10 @@ export const listHobbies = query({
 export const getHobby = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
+    if (slug === "despair") {
+      const potatoes = (await ctx.db.query("potatoes").collect()).filter((potato) => potato.hobbySlugs.length === 0);
+      return { slug: "despair", title: "despair", potatoes };
+    }
     const hobby = await ctx.db.query("hobbies").withIndex("by_slug", (q) => q.eq("slug", slug)).unique();
     if (!hobby) return null;
     const potatoes = (await ctx.db.query("potatoes").collect()).filter((p) => p.hobbySlugs.includes(slug));
@@ -53,4 +57,10 @@ export const aggregateCorruption = query({
     if (!potatoes.length) return 0;
     return potatoes.reduce((sum, potato) => sum + potato.corruption, 0) / potatoes.length;
   },
+});
+
+export const burnTelemetry = query({
+  args: {},
+  handler: (ctx) =>
+    ctx.db.query("tokenTelemetry").withIndex("by_key", (q) => q.eq("key", "0x7a70-burn")).unique(),
 });

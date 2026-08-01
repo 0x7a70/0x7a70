@@ -56,6 +56,17 @@ export default defineSchema({
     lastPostedAt: v.number(),
   }).index("by_ascii_art_id", ["asciiArtId"]),
 
+  tokenTelemetry: defineTable({
+    key: v.string(),
+    contractAddress: v.string(),
+    deadAddress: v.string(),
+    burnedRaw: v.string(),
+    totalSupplyRaw: v.string(),
+    burnedTokens: v.string(),
+    burnedPercent: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   rateLimits: defineTable({
     key: v.string(),
     day: v.string(),

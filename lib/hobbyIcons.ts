@@ -12,6 +12,7 @@ export const HOBBY_ICON_PATHS: Partial<Record<string, string>> = {
   chess: "/hobby-icons/chess.png",
   coding: "/hobby-icons/coding.png",
   "collecting-strange-objects": "/hobby-icons/collecting-strange-objects.png",
+  despair: "/hobby-icons/despair.png",
   gardening: "/hobby-icons/gardening.png",
   journaling: "/hobby-icons/journaling.png",
   mapmaking: "/hobby-icons/mapmaking.png",
@@ -34,5 +35,5 @@ export function hobbyIconPath(hobbySlug: string) {
 export function longestHeldHobby(hobbySlugs: string[]) {
   // Initial hobbies share the same start time. Subsequent hobbies are appended,
   // while abandoned hobbies are removed, so the first current entry is oldest.
-  return hobbySlugs[0];
+  return hobbySlugs[0] || "despair";
 }

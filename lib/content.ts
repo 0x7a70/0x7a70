@@ -35,6 +35,9 @@ export function getPotatoBySlug(slug: string) {
 }
 
 export function getHobbyBySlug(slug: string) {
+  if (slug === "despair") {
+    return { title: "despair", slug, description: read(path.join("hobbies", "Despair.txt")) };
+  }
   const title = HOBBY_NAMES.find((name) => slugify(name) === slug);
   if (!title) return null;
   return { title, slug, description: read(path.join("hobbies", `${title}.txt`)) };
@@ -45,5 +48,8 @@ export function getAllPotatoes() {
 }
 
 export function getAllHobbies() {
-  return HOBBY_NAMES.map((title) => ({ title, slug: slugify(title) }));
+  return [
+    ...HOBBY_NAMES.map((title) => ({ title, slug: slugify(title) })),
+    { title: "despair", slug: "despair" },
+  ];
 }

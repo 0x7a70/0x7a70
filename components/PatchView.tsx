@@ -92,6 +92,7 @@ function buildRootNetwork() {
 export function PatchView() {
   const livePotatoes = useQuery(api.queries.listPotatoes);
   const liveAverage = useQuery(api.queries.aggregateCorruption);
+  const burnTelemetry = useQuery(api.queries.burnTelemetry);
   const potatoes: Potato[] = (livePotatoes?.length ? livePotatoes : FALLBACK_POTATOES) as Potato[];
   const average = liveAverage ?? potatoes.reduce((sum, potato) => sum + potato.corruption, 0) / potatoes.length;
   const stage = corruptionStage(average);
@@ -115,6 +116,16 @@ export function PatchView() {
             <CorruptionBar value={average} label="overall corruption" />
           </Link>
           <p className="patch-whisper">the corruption has reached the roots.</p>
+          <a
+            className="burn-indicator"
+            href="https://potato.fm/token/0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f"
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${burnTelemetry?.burnedTokens ?? "63,264,532"} 0x7a70 set ablaze on potato.fm`}
+          >
+            <Image className="burn-potato-image" src="/burnpotato.png" width={72} height={72} alt="" />
+            <span>{burnTelemetry?.burnedTokens ?? "63,264,532"} 0x7a70 set ablaze</span>
+          </a>
         </section>
 
         <div className="patch-main">

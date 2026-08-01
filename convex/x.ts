@@ -5,8 +5,8 @@ import { fill, openRouter } from "./ai";
 import { corruptionModifier, randomDelay } from "./data";
 import { PERSONALITIES, X_ASCII_ART, X_POST_PROMPT } from "./generatedContent";
 
-const X_POST_MINUTES = 120;
-const X_POST_MAX_MINUTES = 150;
+const X_POST_MINUTES = 240;
+const X_POST_MAX_MINUTES = 255;
 const X_POST_URL = "https://api.x.com/2/tweets";
 const ASCII_POST_CHANCE = 0.2;
 const X_PUBLISH_ATTEMPTS = 3;

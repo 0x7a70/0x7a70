@@ -184,18 +184,34 @@ const HOBBY_ASCII: Record<string, string> = {
       /  saw  /
      /_/\\/\\_/
    ______________
-  | grain/////// |
-  |______________|`,
+   | grain/////// |
+   |______________|`,
+  despair: `       .-""""-.
+     .'  _  _  '.
+    /   / \/ \   \\
+   |   ( o  o )   |
+   |    | || |    |
+   |    | || |    |
+   |     \__/     |
+   |    / /\\ \    |
+    \  /_/  \_\  /
+     '.  /\  .'
+       '-..-'
+        /||\\
+       //||\\\\`,
 };
 
 export function HobbyView({ hobby }: { hobby: { title: string; slug: string; description: string } }) {
   const live = useQuery(api.queries.getHobby, { slug: hobby.slug });
-  const potatoes: Potato[] = (live?.potatoes || FALLBACK_POTATOES.filter((potato) => potato.hobbySlugs.includes(hobby.slug))) as Potato[];
+  const despair = hobby.slug === "despair";
+  const fallbackPotatoes = FALLBACK_POTATOES.filter((potato) => despair ? potato.hobbySlugs.length === 0 : potato.hobbySlugs.includes(hobby.slug));
+  const potatoes: Potato[] = (live?.potatoes || fallbackPotatoes) as Potato[];
   const average = potatoes.length ? potatoes.reduce((sum, potato) => sum + potato.corruption, 0) / potatoes.length : 0;
-  const textCorruption = Math.min(3, Math.floor(average / 25));
+  const presentationCorruption = despair ? 100 : average;
+  const textCorruption = despair ? 3 : Math.min(3, Math.floor(average / 25));
 
   return (
-    <main className={`detail-page hobby-page corruption-${corruptionStage(average)}`}>
+    <main className={`detail-page hobby-page ${despair ? "despair-page" : ""} corruption-${corruptionStage(presentationCorruption)}`}>
       <SiteHeader />
       <div className="detail-shell">
         <nav className="breadcrumbs" aria-label="Breadcrumb">
@@ -206,10 +222,10 @@ export function HobbyView({ hobby }: { hobby: { title: string; slug: string; des
             <div className="hobby-symbol" aria-hidden="true">
               <span>{HOBBY_ASCII[hobby.slug] || HOBBY_ASCII.gardening}</span>
             </div>
-            <p className="hobby-average-corruption">{Math.round(average)}% user corruption</p>
+            <p className="hobby-average-corruption">{Math.round(presentationCorruption)}% user corruption</p>
           </div>
           <div>
-            <p className="eyebrow">patch activity // shared practice</p>
+            <p className="eyebrow">{despair ? "patch activity // absence of practice" : "patch activity // shared practice"}</p>
             <h1>{hobby.title}</h1>
             <CorruptedDescription
               text={hobby.description}
@@ -219,7 +235,7 @@ export function HobbyView({ hobby }: { hobby: { title: string; slug: string; des
           </div>
         </section>
         <section className="hobby-members">
-          <div className="panel-title"><h2>potatoes practicing</h2><span>{potatoes.length} connected</span></div>
+          <div className="panel-title"><h2>{despair ? "potatoes without hobbies" : "potatoes practicing"}</h2><span>{potatoes.length} connected</span></div>
           {potatoes.length ? (
             <div className="member-grid">
               {potatoes.map((potato) => (
@@ -229,7 +245,7 @@ export function HobbyView({ hobby }: { hobby: { title: string; slug: string; des
                 </Link>
               ))}
             </div>
-          ) : <p className="muted">no potato currently admits to this practice.</p>}
+          ) : <p className="muted">{despair ? "no potato is currently empty enough to appear here." : "no potato currently admits to this practice."}</p>}
         </section>
       </div>
     </main>
