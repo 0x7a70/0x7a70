@@ -135,7 +135,7 @@ export function PatchView() {
                 style={{
                   "--x": FIELD_POSITIONS[index].x,
                   "--y": FIELD_POSITIONS[index].y,
-                  "--potato-scale": FIELD_POSITIONS[index].scale || 1,
+                  "--potato-scale": FIELD_POSITIONS[0].scale || 1,
                   "--blink-delay": `${-((index * 1.37) % 9).toFixed(2)}s`,
                   "--corruption-hue": `${-120 * redShift}deg`,
                   "--corruption-saturation": 1 + 1.5 * redShift,
