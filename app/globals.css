@@ -999,12 +999,24 @@ button, input { font: inherit; }
   89% { transform: translate(0); opacity: .5; filter: none; }
 }
 @media (max-width: 900px) {
+  .patch-intro > h1,
+  .patch-intro > .lore-gate,
+  .patch-intro > .patch-whisper {
+    transform: translateX(clamp(-28px, -3vw, -14px));
+  }
   .burn-indicator {
-    position: static;
-    width: max-content;
-    max-width: 100%;
-    transform: none;
-    margin: .55rem auto 0;
+    position: absolute;
+    left: auto;
+    right: clamp(.15rem, 1.2vw, .65rem);
+    top: 52%;
+    width: clamp(74px, 11vw, 100px);
+    transform: translateY(-50%);
+    margin: 0;
+    font-size: clamp(.42rem, 1.05vw, .52rem);
+    line-height: 1.2;
+  }
+  .burn-potato-image {
+    width: clamp(30px, 4.8vw, 42px);
   }
   .patch-main {
     --patch-field-shift: 0px;
