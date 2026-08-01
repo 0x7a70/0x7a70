@@ -36,13 +36,22 @@ export function randomCorruptionChange(current: number) {
     randomInt(4, 24) + (Math.random() < 0.18 ? randomInt(8, 18) : 0),
   );
 
-  // A mild outward bias keeps individual potatoes from clustering around the
-  // midpoint while preserving plenty of reversals and movement in both directions.
-  const awayFromMiddle = Math.random() < 0.62;
-  const outwardDirection = current === 50
-    ? (Math.random() < 0.5 ? -1 : 1)
-    : (current < 50 ? -1 : 1);
-  let direction = awayFromMiddle ? outwardDirection : -outwardDirection;
+  let direction: number;
+  if (current <= 12) {
+    // Near zero, increasingly favor recovery so a potato does not remain pinned
+    // to the lower boundary. The upward chance tapers from 90% at zero to 55%
+    // at 12%, after which the normal outward-bias behavior resumes.
+    const upwardProbability = 0.55 + 0.35 * (1 - Math.max(0, current) / 12);
+    direction = Math.random() < upwardProbability ? 1 : -1;
+  } else {
+    // A mild outward bias keeps individual potatoes from clustering around the
+    // midpoint while preserving plenty of reversals and movement in both directions.
+    const awayFromMiddle = Math.random() < 0.62;
+    const outwardDirection = current === 50
+      ? (Math.random() < 0.5 ? -1 : 1)
+      : (current < 50 ? -1 : 1);
+    direction = awayFromMiddle ? outwardDirection : -outwardDirection;
+  }
 
   if ((current <= 0 && direction < 0) || (current >= 100 && direction > 0)) {
     direction *= -1;

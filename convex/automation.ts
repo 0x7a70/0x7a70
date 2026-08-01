@@ -34,9 +34,16 @@ export const changeHobby = internalMutation({
   handler: async (ctx) => {
     const potatoes = await ctx.db.query("potatoes").collect();
     if (!potatoes.length) return;
-    const potato = potatoes[randomInt(0, potatoes.length - 1)];
+    const allHobbySlugs = HOBBIES.map(slugify);
+    const emptyHobbies = allHobbySlugs.filter(
+      (hobbySlug) => !potatoes.some((candidate) => candidate.hobbySlugs.includes(hobbySlug)),
+    );
+    const eligibleForEmptyHobby = potatoes.filter((candidate) => candidate.hobbySlugs.length < 6);
+    const restoreEmptyHobby = emptyHobbies.length > 0 && eligibleForEmptyHobby.length > 0;
+    const potatoPool = restoreEmptyHobby ? eligibleForEmptyHobby : potatoes;
+    const potato = potatoPool[randomInt(0, potatoPool.length - 1)];
     const removeChance = 0.25 + 0.5 * (potato.corruption / 100);
-    let remove = Math.random() < removeChance;
+    let remove = restoreEmptyHobby ? false : Math.random() < removeChance;
     if (potato.hobbySlugs.length <= 1) remove = false;
     if (potato.hobbySlugs.length >= 6) remove = true;
 
@@ -48,7 +55,9 @@ export const changeHobby = internalMutation({
       hobbySlug = nextHobbies.splice(index, 1)[0];
       type = "hobby_removed";
     } else {
-      const available = HOBBIES.map(slugify).filter((slug) => !nextHobbies.includes(slug));
+      const available = restoreEmptyHobby
+        ? emptyHobbies
+        : allHobbySlugs.filter((slug) => !nextHobbies.includes(slug));
       hobbySlug = available[randomInt(0, available.length - 1)];
       nextHobbies.push(hobbySlug);
       type = "hobby_added";
