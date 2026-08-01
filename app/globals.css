@@ -1034,7 +1034,7 @@ button, input { font: inherit; }
 @media (max-width: 680px) {
   .potato-grid {
     display: block;
-    height: 720px;
+    height: 840px;
     padding: 0;
   }
   .potato-grid > .potato-card:nth-of-type(n) {
@@ -1045,7 +1045,10 @@ button, input { font: inherit; }
   .potato-grid > .potato-card:hover {
     transform: translate(-50%, -50%) scale(var(--potato-scale));
   }
-  .root-network { transform: scaleX(1.01); }
+  .root-network {
+    transform: scaleX(1.01) scaleY(1.025);
+    transform-origin: 65% top;
+  }
   .header-contract { font-size: .45rem; letter-spacing: -.04em; }
 }
 

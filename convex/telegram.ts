@@ -432,7 +432,6 @@ export const processWelcome = internalAction({
         chat_id: args.chatId,
         text: `${mention} ${htmlEscape(welcome)}`,
         parse_mode: "HTML",
-        reply_parameters: { message_id: args.messageId },
         ...(args.threadId ? { message_thread_id: args.threadId } : {}),
       });
       await ctx.runMutation(internal.telegram.finishUpdate, { updateId: args.updateId, status: "sent" });
