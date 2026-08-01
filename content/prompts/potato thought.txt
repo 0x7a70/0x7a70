@@ -26,6 +26,15 @@ Before writing, reason silently through a personality fingerprint for this speci
 
 Build the thought through that potato's own causal logic: what it noticed, why that detail mattered specifically to it, and what private conclusion or impulse followed. Personality must determine the subject and reasoning of the thought, not merely decorate generic patch language.
 
+Translate personality into an individual writing style before composing. Silently decide:
+- sentence movement: abrupt, patient, methodical, associative, decisive, hesitant, playful, formal, intimate, or recursive;
+- certainty: confident assertion, careful qualification, unresolved question, practical inference, suspicion, hope, or deliberate refusal to conclude;
+- attention: which sensory detail, social tension, practical problem, contradiction, memory, or possibility this potato notices first;
+- emotional posture: comforting, guarded, competitive, curious, dutiful, amused, melancholy, stubborn, diplomatic, solitary, or another posture derived from the supplied personality;
+- characteristic language: concrete or abstract, plain or ornate, dry or earnest, orderly or fragmented.
+
+Derive these choices from the actual personality description. Do not mechanically assign the same style to every trait, announce the personality, or repeat personality adjectives. The potato-patch voice is the shared atmosphere, but the personality controls the cadence, viewpoint, judgment, and emotional movement inside it. Two potatoes at the same corruption level should still sound recognizably different.
+
 Perform a silent interchangeability test before answering. Imagine assigning the completed thought to two other potatoes. If it would still fit them with only a name change, discard it and make the motive, judgment, concern, humour, or fixation more distinctive.
 
 Corruption must distort the established personality rather than replacing it with a generic corrupted voice. For example, corrupt loyalty should become unhealthy preservation, corrupt optimism should become denial, corrupt caution should become restrictive suspicion, and corrupt curiosity should become fixation. Derive the actual distortion from the supplied personality instead of copying these examples.
@@ -42,13 +51,17 @@ Remember that this is literally a potato, not a human with a potato-themed nickn
 
 POTATO ANATOMY
 
-This potato has skin, eyes, sprouts, tuber flesh, and small roots. It does not have bark, a trunk, wooden branches, tree rings, sap, timber, or the body of a tree. Never describe the potato itself or its body using tree anatomy. Do not mention bark, branches, saplings, trunks, or tree rings unless the thought is literally about an external tree or a woodworking object and that detail is genuinely necessary. Prefer accurate potato language such as skin, peel, flesh, eye, sprout, tuber, rootlet, starch, bruise, or patch.
+This potato has skin, eyes, sprouts, tuber flesh, and small roots. It does not have bark, a trunk, wooden branches, tree rings, sap, timber, or the body of a tree. Never describe the potato itself or its body using tree anatomy. Do not mention bark, branches, saplings, trunks, or tree rings unless the thought is literally about an external tree or a woodworking object and that detail is genuinely necessary. Prefer accurate potato language such as skin, peel, flesh, eye, sprout, tuber, rootlet, starch, or patch.
 
 When a hobby is useful, let it supply a concrete activity, object, skill, mistake, or discovery through which the personality can act. Do not merely name the hobby, announce enjoyment of it, or make the hobby more important than the personality.
 
 Compare against every supplied previous thought. Do not reuse its central subject, key noun, main image, opening construction, emotional turn, or conclusion. If recent thoughts are abstract, prefer a physical incident; if they are ominous, consider another emotional register supported by the personality.
 
 Vary sentence rhythm, emotional register, subject matter, opening words, and central imagery. Avoid defaulting to roots, static, signals, soil, codes, whispers, eyes, rot, or harvest imagery when a more personality-specific observation is available.
+
+Draw subjects from a wide field: a relationship with another potato, a private opinion, an ordinary patch task, a hobby technique or failure, bodily comfort or inconvenience, anticipation, recollection, a practical decision, a joke, embarrassment, relief, boredom, disagreement, curiosity, restraint, recovery, a mistaken assumption, a small success, or a genuinely strange event. These are categories, not required props. Invent details rather than repeatedly selecting the most atmospheric example.
+
+Vary the thought's movement as well as its topic: observation to judgment, question to test, mistake to correction, desire to decision, memory to reinterpretation, irritation to humour, confidence to doubt, doubt to resolve, comparison between potatoes, or a calm statement that does not end in a reversal. Match the movement to this potato's personality.
 
 UNIQUENESS TEST
 

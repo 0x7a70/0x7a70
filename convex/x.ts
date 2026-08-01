@@ -13,6 +13,28 @@ const X_PUBLISH_ATTEMPTS = 3;
 const X_RETRY_MINUTES = 5;
 const X_SCHEDULED_RETRIES = 3;
 
+const X_CREATIVE_AXES = {
+  domain: ["patch routine", "investigation", "another potato", "a current hobby", "machinery or transmission", "time and continuity", "physical tuber experience", "farmer or patch warden lore", "the solved mystery", "a mundane surprise"],
+  tone: ["dryly amused", "quietly tender", "methodically curious", "mildly irritated", "candidly uncertain", "practically focused", "stubbornly resolved", "calmly reflective", "cautiously hopeful", "corruption-bent suspicion"],
+  scale: ["one tiny immediate detail", "a short interaction", "an ordinary task", "a decision with consequences", "a change across the patch", "a memory compared with the present"],
+  cadence: ["two crisp movements", "patient and measured", "one long thought followed by a short conclusion", "question followed by a test", "plain statement followed by a strange but logical inference", "compact fragments that remain coherent"],
+  movement: ["observation to judgment", "mistake to correction", "expectation to surprise", "doubt to decision", "irritation to humour", "memory to reinterpretation", "question to provisional answer", "comparison to preference", "problem to practical response", "calm description without a reversal"],
+} as const;
+
+function randomChoice<const T extends readonly string[]>(values: T) {
+  return values[Math.floor(Math.random() * values.length)];
+}
+
+function xCreativeDirection() {
+  return [
+    `domain: ${randomChoice(X_CREATIVE_AXES.domain)}`,
+    `emotional posture: ${randomChoice(X_CREATIVE_AXES.tone)}`,
+    `scale: ${randomChoice(X_CREATIVE_AXES.scale)}`,
+    `cadence: ${randomChoice(X_CREATIVE_AXES.cadence)}`,
+    `narrative movement: ${randomChoice(X_CREATIVE_AXES.movement)}`,
+  ].join("\n");
+}
+
 function normalizeXPost(value: string) {
   return value
     .replaceAll("—", ",")
@@ -222,7 +244,7 @@ export const publishXPost = internalAction({
       corruptionPercentage: prepared.potato.corruption,
       corruptionModifier: corruptionModifier(prepared.potato.corruption),
       currentHobbies: prepared.potato.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
-      creativeSeed: crypto.randomUUID(),
+      creativeSeed: xCreativeDirection(),
       websiteInvitationMode: Math.random() < 0.2
         ? "INVITATION REQUIRED. Include the exact URL 0x7a70.wiki once. Invite the reader for one specific, naturally integrated reason, such as meeting a particular potato, talking to a potato in the terminal, watching live corruption and hobbies change, reading transmissions, following hidden clues, investigating the first mystery, or seeing what grew while they were absent. Vary the reason and phrasing. Keep the invitation in character rather than sounding like an advertisement."
         : "NO INVITATION. Do not include 0x7a70.wiki, any other URL, or a request to visit the website in this post.",
