@@ -141,6 +141,7 @@ export function PatchView() {
               return (
                 <div
                 className={`potato-card potato-corruption-${corruptionStage(potato.corruption)} ${potato.name === "0x7a70" ? "primary-potato" : ""}`}
+                data-potato={potato.slug}
                 key={potato.slug}
                 style={{
                   "--x": FIELD_POSITIONS[index].x,

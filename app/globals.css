@@ -1045,6 +1045,18 @@ button, input { font: inherit; }
   .potato-grid > .potato-card:hover {
     transform: translate(-50%, -50%) scale(var(--potato-scale));
   }
+  .potato-grid > .potato-card[data-potato="gloria"] {
+    top: calc(var(--y) * 1% - 16px);
+  }
+  .potato-grid > .potato-card[data-potato="clara"] {
+    left: calc(var(--x) * 1% + var(--patch-field-shift) - 14px);
+  }
+  .potato-grid > .potato-card[data-potato="linda"] {
+    top: calc(var(--y) * 1% - 7px);
+  }
+  .potato-grid > .potato-card[data-potato="kevin"] {
+    top: calc(var(--y) * 1% + 8px);
+  }
   .root-network {
     transform: scaleX(1.01) scaleY(1.025);
     transform-origin: 65% top;
