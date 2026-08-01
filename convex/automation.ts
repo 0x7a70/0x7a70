@@ -1,6 +1,8 @@
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
-import { randomCorruptionChange, randomDelay, randomInt, slugify, HOBBIES } from "./data";
+import { randomCorruptionChange, randomDelayAtFrequency, randomInt, slugify, HOBBIES } from "./data";
+
+const PATCH_CHANGE_FREQUENCY = 0.7;
 
 export const changeCorruption = internalMutation({
   args: {},
@@ -20,7 +22,7 @@ export const changeCorruption = internalMutation({
       delta,
       createdAt: Date.now(),
     });
-    const delay = randomDelay(3, 7);
+    const delay = randomDelayAtFrequency(3, 7, PATCH_CHANGE_FREQUENCY);
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextCorruptionAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.automation.changeCorruption);
@@ -60,7 +62,7 @@ export const changeHobby = internalMutation({
       text: `${potato.name} ${remove ? "abandoned" : "began"} ${hobbySlug.replaceAll("-", " ")}.`,
       createdAt: Date.now(),
     });
-    const delay = randomDelay(5, 9);
+    const delay = randomDelayAtFrequency(5, 9, PATCH_CHANGE_FREQUENCY);
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextHobbyAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.automation.changeHobby);

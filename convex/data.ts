@@ -21,6 +21,12 @@ export const randomInt = (min: number, max: number) =>
 export const randomDelay = (minMinutes: number, maxMinutes: number) =>
   randomInt(minMinutes * 60_000, maxMinutes * 60_000);
 
+export const randomDelayAtFrequency = (
+  minMinutes: number,
+  maxMinutes: number,
+  frequencyMultiplier: number,
+) => Math.round(randomDelay(minMinutes, maxMinutes) / frequencyMultiplier);
+
 export const randomThoughtDelay = () => randomDelay(4, 8);
 
 export function randomCorruptionChange(current: number) {
