@@ -183,17 +183,17 @@ button, input { font: inherit; }
 .patch-whisper { margin: .75rem 0 0; color: var(--dim); font-size: .7rem; }
 .burn-indicator {
   position: absolute;
-  left: calc(100% + clamp(.2rem, .55vw, .6rem));
-  top: 50%;
-  width: clamp(145px, 12vw, 185px);
-  transform: translateY(-43%);
+  left: calc(50% + clamp(285px, 27vw, 330px));
+  top: 52%;
+  width: clamp(118px, 10vw, 145px);
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .18rem;
+  gap: .08rem;
   color: #ef3028;
-  font-size: clamp(.58rem, .72vw, .72rem);
-  line-height: 1.45;
+  font-size: clamp(.5rem, .58vw, .62rem);
+  line-height: 1.3;
   letter-spacing: .035em;
   font-weight: 700;
   text-align: center;
@@ -201,7 +201,7 @@ button, input { font: inherit; }
 .burn-indicator:hover { color: #ff4a3f; }
 .burn-indicator:focus-visible { outline: 1px dashed #ef3028; outline-offset: .35rem; }
 .burn-potato-image {
-  width: clamp(48px, 4.3vw, 70px);
+  width: clamp(38px, 3.25vw, 52px);
   height: auto;
   flex: 0 0 auto;
 }
