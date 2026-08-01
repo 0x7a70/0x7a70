@@ -183,18 +183,20 @@ button, input { font: inherit; }
 .patch-whisper { margin: .75rem 0 0; color: var(--dim); font-size: .7rem; }
 .burn-indicator {
   position: absolute;
-  left: calc(100% + clamp(.7rem, 1.4vw, 1.4rem));
+  left: calc(100% + clamp(.2rem, .55vw, .6rem));
   top: 50%;
-  width: clamp(170px, 15vw, 225px);
+  width: clamp(145px, 12vw, 185px);
   transform: translateY(-43%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: .55rem;
+  gap: .18rem;
   color: #ef3028;
   font-size: clamp(.58rem, .72vw, .72rem);
   line-height: 1.45;
   letter-spacing: .035em;
-  text-align: left;
+  font-weight: 700;
+  text-align: center;
 }
 .burn-indicator:hover { color: #ff4a3f; }
 .burn-indicator:focus-visible { outline: 1px dashed #ef3028; outline-offset: .35rem; }
@@ -202,8 +204,9 @@ button, input { font: inherit; }
   width: clamp(48px, 4.3vw, 70px);
   height: auto;
   flex: 0 0 auto;
-  filter: brightness(0) saturate(100%) invert(25%) sepia(98%) saturate(4311%) hue-rotate(353deg) brightness(102%) contrast(88%);
 }
+.burn-copy { display: flex; flex-direction: column; align-items: center; }
+.burn-copy strong { font-weight: 800; }
 
 /* meter */
 .corruption-meter { width: max-content; max-width: 100%; margin: 2rem auto 0; }

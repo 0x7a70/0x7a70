@@ -124,7 +124,10 @@ export function PatchView() {
             aria-label={`${burnTelemetry?.burnedTokens ?? "63,264,532"} 0x7a70 set ablaze on potato.fm`}
           >
             <Image className="burn-potato-image" src="/burnpotato.png" width={72} height={72} alt="" />
-            <span>{burnTelemetry?.burnedTokens ?? "63,264,532"} 0x7a70 set ablaze</span>
+            <span className="burn-copy">
+              <strong>{burnTelemetry?.burnedTokens ?? "63,264,532"}</strong>
+              <span>0x7a70 set ablaze</span>
+            </span>
           </a>
         </section>
 
