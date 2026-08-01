@@ -27,7 +27,7 @@ export const randomDelayAtFrequency = (
   frequencyMultiplier: number,
 ) => Math.round(randomDelay(minMinutes, maxMinutes) / frequencyMultiplier);
 
-export const randomThoughtDelay = () => randomDelay(4, 8);
+export const randomThoughtDelay = () => randomDelay(8, 16);
 
 export function randomCorruptionChange(current: number) {
   // Most changes are plainly visible, with occasional larger shocks.
