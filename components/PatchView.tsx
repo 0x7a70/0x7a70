@@ -141,6 +141,7 @@ export function PatchView() {
                 <span className="potato-image-wrap">
                   <Image src={potatoImage(potato.corruption)} width={220} height={220} alt="" priority={potato.name === "0x7a70"} />
                 </span>
+                <span className="potato-hover-name" aria-hidden="true">{potato.name.toLowerCase()}</span>
               </Link>
               );
             })}

@@ -41,10 +41,10 @@ const formatForSocial = (art) => art
   })
   .join("\n");
 
-const potatoViewSource = fs.readFileSync(path.join(root, "components", "PotatoView.tsx"), "utf8");
-const potatoTemplate = potatoViewSource.match(/const base = `([\s\S]*?)`;/)?.[1];
+const potatoAsciiSource = fs.readFileSync(path.join(root, "lib", "potatoAscii.ts"), "utf8");
+const potatoTemplate = potatoAsciiSource.match(/const body = `([\s\S]*?)`;/)?.[1];
 if (!potatoTemplate) throw new Error("Could not locate profile potato ASCII");
-const potatoBase = decodeTemplateArt(potatoTemplate.replace("${rootLabel}", "root_01"));
+const potatoBase = `${decodeTemplateArt(potatoTemplate)}\n          '--root_01--'`;
 
 const corruptPotato = (level) => {
   if (level === 0) return potatoBase;
