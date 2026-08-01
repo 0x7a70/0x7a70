@@ -121,14 +121,15 @@ async function generateReply(context: PotatoContext, message: string, conversati
   });
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
+      const recoveryAttempt = attempt > 1;
       const reply = normalize(await openRouter([
         { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. Never invent durations, countdowns, schedules, cycles, periodic resets, or numerical timing claims that were not explicitly supplied by the user or live project context. In particular, do not introduce a 12-hour cycle or any similar recurring interval unprompted. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag. Never use the em dash character (—); choose other punctuation.` },
         { role: "user", content: message },
       ], 280, {
-        reasoningEffort: "high",
-        minimumCompletionTokens: attempt === 1 ? 2_048 : 1_536,
-        timeoutMs: attempt === 1 ? 50_000 : 40_000,
-        providerSort: attempt === 1 ? "throughput" : "latency",
+        reasoningEffort: recoveryAttempt ? "medium" : "high",
+        minimumCompletionTokens: 4_096,
+        timeoutMs: recoveryAttempt ? 40_000 : 55_000,
+        providerSort: recoveryAttempt ? "latency" : "throughput",
       }), 150);
       if (reply) return reply;
     } catch (error) {
@@ -150,7 +151,7 @@ async function generateWelcome(context: PotatoContext, firstName: string, userna
         { role: "user", content: "Produce the welcome now." },
       ], 70, {
         reasoningEffort: attempt === 1 ? "medium" : "low",
-        minimumCompletionTokens: attempt === 1 ? 768 : 512,
+        minimumCompletionTokens: 1_024,
         timeoutMs: 30_000,
         providerSort: "latency",
       }), 35);
@@ -515,14 +516,15 @@ export const generateGroupThought = internalAction({
     const maxAttempts = 10;
     for (let attempt = 1; attempt <= maxAttempts && !thought; attempt += 1) {
       try {
+        const recoveryAttempt = attempt > Math.ceil(maxAttempts / 2);
         const candidate = normalize(await openRouter([
           { role: "system", content: prompt },
           { role: "user", content: "Generate the single private thought now. Return only the thought." },
         ], 80, {
-          reasoningEffort: attempt === 1 ? "high" : "medium",
-          minimumCompletionTokens: attempt === 1 ? 1_536 : 1_024,
-          timeoutMs: 40_000,
-          providerSort: attempt === 1 ? "throughput" : "latency",
+          reasoningEffort: recoveryAttempt ? "medium" : "high",
+          minimumCompletionTokens: 4_096,
+          timeoutMs: recoveryAttempt ? 40_000 : 50_000,
+          providerSort: recoveryAttempt ? "latency" : "throughput",
         }), 30);
         const words = candidate ? candidate.split(/\s+/).length : 0;
         if (words >= 20 && words <= 30) {

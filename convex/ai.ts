@@ -197,6 +197,7 @@ export const generateThought = internalAction({
     });
     for (let attempt = 1; attempt <= THOUGHT_MAX_ATTEMPTS && !thought; attempt += 1) {
       try {
+        const recoveryAttempt = attempt > Math.ceil(THOUGHT_MAX_ATTEMPTS / 2);
         const instruction = attempt === 1
           ? "Generate the single private thought now. Return only the thought."
           : "The previous attempt did not produce a valid result. Generate a fresh thought containing exactly 20 to 30 words. Return only the thought.";
@@ -204,9 +205,10 @@ export const generateThought = internalAction({
           { role: "system", content: prompt },
           { role: "user", content: instruction },
         ], 80, {
-          reasoningEffort: "high",
-          minimumCompletionTokens: 2_048,
-          timeoutMs: 45_000,
+          reasoningEffort: recoveryAttempt ? "medium" : "high",
+          minimumCompletionTokens: 4_096,
+          timeoutMs: recoveryAttempt ? 40_000 : 50_000,
+          providerSort: recoveryAttempt ? "latency" : "throughput",
         }), 30);
         const words = candidate ? candidate.split(/\s+/).length : 0;
         if (words >= 20 && words <= 30) {
@@ -284,7 +286,7 @@ export const generateTerminalReply = action({
           { role: "user", content: args.message },
         ], 280, {
           reasoningEffort: recoveryAttempt ? "medium" : "high",
-          minimumCompletionTokens: recoveryAttempt ? 1_024 : 1_536,
+          minimumCompletionTokens: 3_072,
           timeoutMs: recoveryAttempt ? 32_000 : 45_000,
           providerSort: recoveryAttempt ? "latency" : "throughput",
         }), 150);

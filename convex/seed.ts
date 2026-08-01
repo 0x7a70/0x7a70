@@ -54,7 +54,7 @@ export const initialize = mutation({
     await ctx.scheduler.runAfter(corruptionDelay, internal.automation.changeCorruption);
     await ctx.scheduler.runAfter(hobbyDelay, internal.automation.changeHobby);
     await ctx.scheduler.runAfter(thoughtDelay, internal.ai.generateThought);
-    await ctx.scheduler.runAfter(xPostDelay, internal.x.publishXPost);
+    await ctx.scheduler.runAfter(xPostDelay, internal.x.publishXPost, {});
     return { initialized: true, potatoes: POTATOES.length, hobbies: HOBBIES.length };
   },
 });
@@ -76,7 +76,7 @@ export const startXPosting = mutation({
     const delay = randomDelay(120, 150);
     const nextXPostAt = now + delay;
     await ctx.db.patch(state._id, { nextXPostAt });
-    await ctx.scheduler.runAfter(delay, internal.x.publishXPost);
+    await ctx.scheduler.runAfter(delay, internal.x.publishXPost, {});
     return { started: true, nextXPostAt };
   },
 });
@@ -94,7 +94,7 @@ export const postXNow = mutation({
     const delay = 1_000;
     const nextXPostAt = Date.now() + delay;
     await ctx.db.patch(state._id, { nextXPostAt });
-    await ctx.scheduler.runAfter(delay, internal.x.publishXPost);
+    await ctx.scheduler.runAfter(delay, internal.x.publishXPost, {});
     return { scheduled: true, nextXPostAt };
   },
 });

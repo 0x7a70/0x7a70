@@ -9,6 +9,9 @@ const X_POST_MINUTES = 120;
 const X_POST_MAX_MINUTES = 150;
 const X_POST_URL = "https://api.x.com/2/tweets";
 const ASCII_POST_CHANCE = 0.2;
+const X_PUBLISH_ATTEMPTS = 3;
+const X_RETRY_MINUTES = 5;
+const X_SCHEDULED_RETRIES = 3;
 
 function normalizeXPost(value: string) {
   return value
@@ -88,22 +91,40 @@ async function publishToX(text: string) {
   return { id: payload.data.id, text: payload.data.text || text };
 }
 
+async function publishToXWithRetries(text: string) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= X_PUBLISH_ATTEMPTS; attempt += 1) {
+    try {
+      return await publishToX(text);
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : "unknown";
+      console.error("x_publish_attempt_failed", { attempt, message });
+      if (/\b(400|401|403)\b/.test(message) || attempt === X_PUBLISH_ATTEMPTS) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("X publication failed");
+}
+
 export const prepareXPost = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { isRetry: v.boolean(), asciiArtId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const now = Date.now();
     const state = await ctx.db
       .query("automationState")
       .withIndex("by_key", (q) => q.eq("key", "main"))
       .unique();
     if (!state) return null;
-    if (state.nextXPostAt && now < state.nextXPostAt - 5_000) return null;
+    if (!args.isRetry && state.nextXPostAt && now < state.nextXPostAt - 5_000) return null;
 
     // Schedule first so AI, authentication, billing, and X failures can only
     // skip one post. They cannot stop the recurring loop.
-    const delay = randomDelay(X_POST_MINUTES, X_POST_MAX_MINUTES);
-    await ctx.db.patch(state._id, { nextXPostAt: now + delay });
-    await ctx.scheduler.runAfter(delay, internal.x.publishXPost);
+    if (!args.isRetry) {
+      const delay = randomDelay(X_POST_MINUTES, X_POST_MAX_MINUTES);
+      await ctx.db.patch(state._id, { nextXPostAt: now + delay });
+      await ctx.scheduler.runAfter(delay, internal.x.publishXPost, {});
+    }
 
     const potato = await ctx.db
       .query("potatoes")
@@ -112,7 +133,9 @@ export const prepareXPost = internalMutation({
     if (!potato) return null;
 
     let asciiArt: { id: string; text: string } | null = null;
-    if (Math.random() < ASCII_POST_CHANCE) {
+    if (args.asciiArtId) {
+      asciiArt = X_ASCII_ART.find((art) => art.id === args.asciiArtId) || null;
+    } else if (!args.isRetry && Math.random() < ASCII_POST_CHANCE) {
       const usage = await ctx.db.query("xAsciiUsage").collect();
       const counts = new Map(usage.map((entry) => [entry.asciiArtId, entry.postCount]));
       const minimumCount = Math.min(...X_ASCII_ART.map((art) => counts.get(art.id) || 0));
@@ -121,6 +144,17 @@ export const prepareXPost = internalMutation({
     }
 
     return { potato, asciiArt };
+  },
+});
+
+export const scheduleXRetry = internalMutation({
+  args: { retryAttempt: v.number(), asciiArtId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await ctx.scheduler.runAfter(
+      X_RETRY_MINUTES * 60_000,
+      internal.x.publishXPost,
+      { retryAttempt: args.retryAttempt, ...(args.asciiArtId ? { asciiArtId: args.asciiArtId } : {}) },
+    );
   },
 });
 
@@ -150,14 +184,18 @@ export const recordXPost = internalMutation({
 });
 
 export const publishXPost = internalAction({
-  args: {},
-  handler: async (ctx) => {
-    const prepared = await ctx.runMutation(internal.x.prepareXPost);
+  args: { retryAttempt: v.optional(v.number()), asciiArtId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const retryAttempt = args.retryAttempt || 0;
+    const prepared = await ctx.runMutation(internal.x.prepareXPost, {
+      isRetry: retryAttempt > 0,
+      ...(args.asciiArtId ? { asciiArtId: args.asciiArtId } : {}),
+    });
     if (!prepared) return;
 
     if (prepared.asciiArt) {
       try {
-        const posted = await publishToX(prepared.asciiArt.text);
+        const posted = await publishToXWithRetries(prepared.asciiArt.text);
         await ctx.runMutation(internal.x.recordXPost, {
           postId: posted.id,
           text: posted.text,
@@ -168,6 +206,12 @@ export const publishXPost = internalAction({
           asciiArtId: prepared.asciiArt.id,
           message: error instanceof Error ? error.message : "unknown",
         });
+        if (retryAttempt < X_SCHEDULED_RETRIES) {
+          await ctx.runMutation(internal.x.scheduleXRetry, {
+            retryAttempt: retryAttempt + 1,
+            asciiArtId: prepared.asciiArt.id,
+          });
+        }
       }
       return;
     }
@@ -191,8 +235,8 @@ export const publishXPost = internalAction({
           { role: "system", content: prompt },
           { role: "user", content: attempt === 1 ? "Generate the post now." : `Attempt ${attempt}: produce a completely fresh post that satisfies every format rule.` },
         ], 160, {
-          reasoningEffort: "high",
-          minimumCompletionTokens: 4_096,
+          reasoningEffort: attempt <= 3 ? "high" : "medium",
+          minimumCompletionTokens: 8_192,
           timeoutMs: 60_000,
           providerSort: "throughput",
           temperature: 0.95,
@@ -213,16 +257,22 @@ export const publishXPost = internalAction({
     }
     if (!text) {
       console.error("x_generation_failed", "no valid post after 10 attempts");
+      if (retryAttempt < X_SCHEDULED_RETRIES) {
+        await ctx.runMutation(internal.x.scheduleXRetry, { retryAttempt: retryAttempt + 1 });
+      }
       return;
     }
 
     try {
-      const posted = await publishToX(text);
+      const posted = await publishToXWithRetries(text);
       await ctx.runMutation(internal.x.recordXPost, { postId: posted.id, text: posted.text });
     } catch (error) {
       console.error("x_publish_failed", {
         message: error instanceof Error ? error.message : "unknown",
       });
+      if (retryAttempt < X_SCHEDULED_RETRIES) {
+        await ctx.runMutation(internal.x.scheduleXRetry, { retryAttempt: retryAttempt + 1 });
+      }
     }
   },
 });
