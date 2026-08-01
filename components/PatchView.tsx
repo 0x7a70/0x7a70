@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { corruptionStage } from "@/lib/constants";
+import { corruptionStage, potatoImage } from "@/lib/constants";
 import { FALLBACK_POTATOES } from "@/lib/fallback";
 import type { Potato } from "@/lib/types";
 import { CorruptionBar } from "./CorruptionBar";
@@ -29,11 +29,6 @@ const ROOT_POSITIONS: Array<{ x: number; y: number }> = [
   { x: 19, y: 59 }, { x: 42, y: 57 }, { x: 76, y: 58 }, { x: 91, y: 60 },
   { x: 29, y: 73 }, { x: 54, y: 72 }, { x: 82, y: 73 },
 ];
-
-function patchPotatoImage(corruption: number) {
-  const level = Math.min(9, Math.max(0, Math.floor(corruption / 10)));
-  return `/${level}_transparent.png`;
-}
 
 function buildRootNetwork() {
   const width = 121;
@@ -135,7 +130,7 @@ export function PatchView() {
                 style={{
                   "--x": FIELD_POSITIONS[index].x,
                   "--y": FIELD_POSITIONS[index].y,
-                  "--potato-scale": FIELD_POSITIONS[0].scale || 1,
+                  "--potato-scale": FIELD_POSITIONS[index].scale || 1,
                   "--blink-delay": `${-((index * 1.37) % 9).toFixed(2)}s`,
                   "--corruption-hue": `${-120 * redShift}deg`,
                   "--corruption-saturation": 1 + 1.5 * redShift,
@@ -144,7 +139,7 @@ export function PatchView() {
                 } as React.CSSProperties}
               >
                 <span className="potato-image-wrap">
-                  <Image src={patchPotatoImage(potato.corruption)} width={220} height={220} alt="" priority={potato.name === "0x7a70"} />
+                  <Image src={potatoImage(potato.corruption)} width={220} height={220} alt="" priority={potato.name === "0x7a70"} />
                 </span>
                 <span className="potato-hover-name" aria-hidden="true">{potato.name.toLowerCase()}</span>
               </Link>
