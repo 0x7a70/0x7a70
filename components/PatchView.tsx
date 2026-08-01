@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { corruptionStage, potatoImage } from "@/lib/constants";
 import { FALLBACK_POTATOES } from "@/lib/fallback";
+import { hobbyIconPath, longestHeldHobby } from "@/lib/hobbyIcons";
 import type { Potato } from "@/lib/types";
 import { CorruptionBar } from "./CorruptionBar";
 import { EventFeed } from "./EventFeed";
@@ -121,16 +122,20 @@ export function PatchView() {
             <pre className="root-network" aria-hidden="true">{rootNetwork}</pre>
             {potatoes.map((potato, index) => {
               const redShift = Math.max(0, Math.min(1, (potato.corruption - 80) / 20));
+              const featuredHobby = longestHeldHobby(potato.hobbySlugs);
+              const featuredHobbyIcon = featuredHobby ? hobbyIconPath(featuredHobby) : undefined;
               return (
-                <Link
+                <div
                 className={`potato-card potato-corruption-${corruptionStage(potato.corruption)} ${potato.name === "0x7a70" ? "primary-potato" : ""}`}
-                href={`/potatoes/${potato.slug}`}
                 key={potato.slug}
-                aria-label={`open ${potato.name}`}
                 style={{
                   "--x": FIELD_POSITIONS[index].x,
                   "--y": FIELD_POSITIONS[index].y,
                   "--potato-scale": FIELD_POSITIONS[index].scale || 1,
+                  "--hobby-icon-x": `${8 + ((index * 17) % 19)}%`,
+                  "--hobby-icon-y": `${57 + ((index * 11) % 16)}%`,
+                  "--hobby-icon-tilt": `${-12 + ((index * 7) % 25)}deg`,
+                  "--hobby-icon-side": index % 2 === 0 ? "auto" : `${8 + ((index * 13) % 17)}%`,
                   "--blink-delay": `${-((index * 1.37) % 9).toFixed(2)}s`,
                   "--corruption-hue": `${-120 * redShift}deg`,
                   "--corruption-saturation": 1 + 1.5 * redShift,
@@ -138,11 +143,23 @@ export function PatchView() {
                   "--corruption-red-glow": `0 0 ${1 + 5 * redShift}px rgba(255, 20, 20, ${.72 * redShift})`,
                 } as React.CSSProperties}
               >
-                <span className="potato-image-wrap">
-                  <Image src={potatoImage(potato.corruption)} width={220} height={220} alt="" priority={potato.name === "0x7a70"} />
-                </span>
+                <Link className="potato-profile-link" href={`/potatoes/${potato.slug}`} aria-label={`open ${potato.name}`}>
+                  <span className="potato-image-wrap">
+                    <Image src={potatoImage(potato.corruption)} width={220} height={220} alt="" priority={potato.name === "0x7a70"} />
+                  </span>
+                </Link>
+                {featuredHobby && featuredHobbyIcon ? (
+                  <Link
+                    className={`potato-hobby-icon ${index % 2 === 0 ? "hobby-icon-left" : "hobby-icon-right"}`}
+                    href={`/hobbies/${featuredHobby}`}
+                    aria-label={`open ${featuredHobby.replaceAll("-", " ")}`}
+                    title={featuredHobby.replaceAll("-", " ")}
+                  >
+                    <Image src={featuredHobbyIcon} width={72} height={72} alt="" />
+                  </Link>
+                ) : null}
                 <span className="potato-hover-name" aria-hidden="true">{potato.name.toLowerCase()}</span>
-              </Link>
+              </div>
               );
             })}
           </section>

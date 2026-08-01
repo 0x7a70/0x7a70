@@ -747,6 +747,30 @@ button, input { font: inherit; }
   transform: translate(-50%, -50%) scale(calc(var(--potato-scale) * 1.08));
 }
 .potato-grid .potato-image-wrap { max-width: none; }
+.potato-profile-link { display: block; width: 100%; }
+.potato-hobby-icon {
+  position: absolute;
+  z-index: 7;
+  top: var(--hobby-icon-y);
+  width: 34%;
+  aspect-ratio: 1;
+  transform: rotate(var(--hobby-icon-tilt));
+  transition: transform .14s linear, filter .14s linear;
+}
+.potato-hobby-icon.hobby-icon-left { left: var(--hobby-icon-x); }
+.potato-hobby-icon.hobby-icon-right { right: var(--hobby-icon-side); }
+.potato-hobby-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: contrast(1.35) brightness(1.18);
+}
+.potato-hobby-icon:hover,
+.potato-hobby-icon:focus-visible {
+  transform: rotate(var(--hobby-icon-tilt)) scale(1.12);
+  filter: drop-shadow(0 0 4px rgba(85, 255, 112, .5));
+}
 .potato-hover-name {
   position: absolute;
   z-index: 8;
@@ -765,7 +789,7 @@ button, input { font: inherit; }
   transition: opacity .12s linear, transform .12s linear;
 }
 .potato-card:hover .potato-hover-name,
-.potato-card:focus-visible .potato-hover-name {
+.potato-card:focus-within .potato-hover-name {
   opacity: 1;
   transform: translate(-50%, 0);
 }
