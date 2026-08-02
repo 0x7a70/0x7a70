@@ -34,7 +34,7 @@ export function WorkArchive({ scope, slug = "" }: { scope: "potato" | "hobby" | 
                 <div className="work-entry-art">
                   <RelativeTime timestamp={work.createdAt} />
                   <Link href={`/works/${work.slug}`} aria-label={`view ${work.title}`}>
-                    <pre className="work-archive-ascii" aria-hidden="true">{work.webAscii}</pre>
+                    <pre className="work-archive-ascii" aria-hidden="true"><code>{work.webAscii}</code></pre>
                   </Link>
                 </div>
               ) : <RelativeTime timestamp={work.createdAt} />}
