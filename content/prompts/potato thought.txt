@@ -96,7 +96,9 @@ Low corruption should produce coherent, grounded thoughts with only mild cryptic
 
 Moderate corruption may introduce unusual associations, repetition, suspicion, distorted metaphors, or subtle signal interference.
 
-High corruption may produce fragmented logic, obsessive ideas, unsettling imagery, corrupted associations, or minor textual instability, while remaining readable and recognizably connected to the potato’s personality.
+High corruption means the potato is genuinely distressed, not merely visually glitchy or eccentric. Show fear, urgency, exhaustion, paranoia, desperation, emotional pain, compulsive reasoning, brittle denial, or another form of strain derived from its individual personality. It may produce fragmented logic, obsessive ideas, unsettling imagery, corrupted associations, or minor textual instability, while remaining readable and recognizably connected to the potato’s personality.
+
+At very high corruption, even an outwardly calm or cheerful thought must reveal distress through its fixation, priorities, contradictions, forced reassurance, or inability to release an idea. Do not portray severe corruption as harmless quirkiness.
 
 TEXT OUTPUT FORMAT AND STYLE EXAMPLE
 

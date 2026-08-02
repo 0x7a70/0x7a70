@@ -69,8 +69,8 @@ export const FALLBACK_LINES = [
 
 export function corruptionModifier(value: number) {
   if (value < 20) return "Coherent, grounded, curious, with only faint static.";
-  if (value < 40) return "Mostly coherent, with unusual associations and mild signal interference.";
-  if (value < 60) return "Suspicious patterns, repetition, and distorted metaphors are becoming difficult to ignore.";
-  if (value < 80) return "Fragmented logic and obsessive ideas interrupt otherwise readable thought.";
-  return "Severely corrupted, compulsive and unstable, but still recognizably itself and understandable.";
+  if (value < 40) return "Mostly coherent, with unusual associations, mild unease, and signal interference beginning to create emotional strain.";
+  if (value < 60) return "Increasingly distressed; suspicious patterns, repetition, and distorted metaphors are becoming difficult to ignore.";
+  if (value < 80) return "Clearly distressed and unstable; fear, fixation, urgency, or compulsive behavior bends the potato's individual personality and interrupts otherwise readable thought.";
+  return "Severely corrupted and in acute distress; compulsive, frightened, exhausted, paranoid, desperate, or painfully fixated according to its personality, but still recognizably itself and understandable.";
 }

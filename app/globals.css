@@ -594,16 +594,19 @@ button, input { font: inherit; }
 .work-entry p a { color: #77c983; }
 .work-entry time { flex: 0 0 auto; color: var(--dim); font-size: .62rem; }
 .work-entry-description { max-width: 62ch; color: #5eae6d !important; line-height: 1.55; }
-.work-entry-art { flex: 0 0 min(42%, 430px); display: grid; justify-items: end; gap: .35rem; min-width: 0; }
+.work-entry-art { flex: 0 0 clamp(210px, 23vw, 275px); display: grid; justify-items: end; gap: .25rem; min-width: 0; }
 .work-entry-art > a { display: block; width: 100%; }
 .work-archive-ascii {
-  width: 100%; max-width: 100%; min-height: 150px; display: grid; align-content: center;
+  width: 100%; max-width: 100%; min-height: 0; aspect-ratio: 1; display: grid; align-content: center;
   margin: 0; padding: .8rem; overflow-x: auto; border: 1px dashed var(--line);
   color: var(--green); background: rgba(0, 12, 3, .34);
   font: 700 clamp(.5rem, .65vw, .68rem)/1.15 monospace; white-space: pre;
 }
 .works-page .work-entry-copy { flex: 1 1 auto; }
-.works-page .work-entry { align-items: start; }
+.works-page .work-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; padding: 1rem; }
+.works-page .work-entry { align-items: start; gap: .55rem; padding: .8rem; border: 1px dotted rgba(68, 190, 88, .22); }
+.works-page .work-entry-art { flex-basis: clamp(175px, 14vw, 215px); }
+.works-page .work-load-more { grid-column: 1 / -1; }
 .works-empty { padding: 1rem; }
 .work-load-more { display: block; width: 100%; padding: .8rem; }
 .work-hero { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
@@ -1267,8 +1270,11 @@ button, input { font: inherit; }
   .work-title-link, .panel-title { overflow-wrap: anywhere; word-break: break-word; }
   .detail-page pre { max-width: 100%; overflow-x: auto; }
   .works-page .work-entry { display: grid; grid-template-columns: minmax(0, 1fr); }
-  .works-page .work-entry-art { width: 100%; max-width: 100%; justify-items: start; }
+  .works-page .work-entry-art { width: min(100%, 260px); max-width: 100%; justify-items: start; }
   .works-page .work-entry-art time { justify-self: end; }
+}
+@media (min-width: 701px) and (max-width: 800px) {
+  .works-page .work-list { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
