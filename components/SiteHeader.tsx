@@ -10,8 +10,10 @@ export function SiteHeader() {
           <a className="header-contract" href={TOKEN_URL} target="_blank" rel="noreferrer">
             0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f
           </a>
-          <Link className="header-section-link" href="/hobbies">hobbies</Link>
-          <Link className="header-section-link" href="/works">works</Link>
+          <div className="header-directory-links">
+            <Link className="header-section-link" href="/hobbies">hobbies</Link>
+            <Link className="header-section-link" href="/works">works</Link>
+          </div>
         </div>
         <a className="header-bot-link" href={TELEGRAM_BOT_URL} target="_blank" rel="noreferrer">
           0x7a70bot

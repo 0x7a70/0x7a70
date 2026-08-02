@@ -1,9 +1,8 @@
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { internalAction, internalMutation } from "./_generated/server";
-import { randomCorruptionChange, randomDelayAtFrequency, randomInt, slugify, HOBBIES } from "./data";
+import { randomCorruptionChange, randomDelay, randomInt, slugify, HOBBIES } from "./data";
 
-const PATCH_CHANGE_FREQUENCY = 0.7;
 const TOKEN_CONTRACT = "0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f";
 const DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 const DEFAULT_ROBINHOOD_RPC = "https://rpc.mainnet.chain.robinhood.com";
@@ -89,7 +88,7 @@ export const changeCorruption = internalMutation({
       delta,
       createdAt: Date.now(),
     });
-    const delay = randomDelayAtFrequency(3, 7, PATCH_CHANGE_FREQUENCY);
+    const delay = randomDelay(8, 12);
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextCorruptionAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.automation.changeCorruption);
@@ -166,7 +165,7 @@ export const changeHobby = internalMutation({
         createdAt: Date.now(),
       });
     }
-    const delay = randomDelayAtFrequency(5, 9, PATCH_CHANGE_FREQUENCY);
+    const delay = randomDelay(15, 20);
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextHobbyAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.automation.changeHobby);

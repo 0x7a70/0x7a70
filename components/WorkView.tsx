@@ -22,7 +22,7 @@ export function WorkView({ slug }: { slug: string }) {
       <SiteHeader />
       <div className="detail-shell">
         <nav className="breadcrumbs" aria-label="Breadcrumb">
-          <Link href="/patch">patch</Link><span>/</span><span>works</span><span>/</span><span>{work.title}</span>
+          <Link href="/patch">patch</Link><span>/</span><Link href="/works">works</Link><span>/</span><span>{work.title}</span>
         </nav>
         <section className="work-hero">
           <div className="work-art-column">

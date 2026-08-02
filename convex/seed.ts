@@ -1,9 +1,8 @@
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { mutation } from "./_generated/server";
-import { HOBBIES, POTATOES, randomDelay, randomDelayAtFrequency, randomInt, randomThoughtDelay, slugify } from "./data";
+import { HOBBIES, POTATOES, randomDelay, randomInt, randomThoughtDelay, slugify } from "./data";
 
-const PATCH_CHANGE_FREQUENCY = 0.7;
 
 function assertSecret(secret: string) {
   const expected = process.env.CONVEX_SERVER_SECRET;
@@ -41,8 +40,8 @@ export const initialize = mutation({
       });
     }
 
-    const corruptionDelay = randomDelayAtFrequency(3, 7, PATCH_CHANGE_FREQUENCY);
-    const hobbyDelay = randomDelayAtFrequency(5, 9, PATCH_CHANGE_FREQUENCY);
+    const corruptionDelay = randomDelay(8, 12);
+    const hobbyDelay = randomDelay(15, 20);
     const thoughtDelay = randomThoughtDelay();
     const xPostDelay = randomDelay(240, 255);
     const workDelay = 1_000;

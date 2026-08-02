@@ -48,6 +48,12 @@ function normalizeXPost(value: string) {
     .trim();
 }
 
+function containsOutboundReference(value: string) {
+  const urlOrDomain = /(?:https?:\/\/|www\.|\b(?:[a-z0-9-]+\.)+(?:com|wiki|org|net|io|co|app|dev|xyz|gg)\b)/i;
+  const mention = /(^|[^\w])@[a-z0-9_]{1,15}\b/i;
+  return urlOrDomain.test(value) || mention.test(value);
+}
+
 function oauthEncode(value: string) {
   return encodeURIComponent(value).replace(/[!'()*]/g, (character) =>
     `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
@@ -114,7 +120,10 @@ async function publishToX(text: string) {
   return { id: payload.data.id, text: payload.data.text || text };
 }
 
-async function publishToXWithRetries(text: string) {
+async function publishOriginalXPostWithRetries(text: string) {
+  if (containsOutboundReference(text)) {
+    throw new Error("Original X posts may not contain links or @mentions");
+  }
   let lastError: unknown;
   for (let attempt = 1; attempt <= X_PUBLISH_ATTEMPTS; attempt += 1) {
     try {
@@ -256,7 +265,7 @@ export const publishXPost = internalAction({
       }).join("\n");
       const workText = `${prepared.work.potatoName} ${prepared.work.shareAction} ${prepared.work.title}.\n\n${prepared.work.shareSummary}\n\n${socialArt}`;
       try {
-        const posted = await publishToXWithRetries(workText);
+        const posted = await publishOriginalXPostWithRetries(workText);
         await ctx.runMutation(internal.x.recordXPost, { postId: posted.id, text: posted.text, workId: prepared.work._id });
       } catch (error) {
         console.error("x_work_publish_failed", { workId: prepared.work._id, message: error instanceof Error ? error.message : "unknown" });
@@ -271,7 +280,7 @@ export const publishXPost = internalAction({
 
     if (prepared.asciiArt) {
       try {
-        const posted = await publishToXWithRetries(prepared.asciiArt.text);
+        const posted = await publishOriginalXPostWithRetries(prepared.asciiArt.text);
         await ctx.runMutation(internal.x.recordXPost, {
           postId: posted.id,
           text: posted.text,
@@ -300,9 +309,6 @@ export const publishXPost = internalAction({
       currentHobbies: prepared.potato.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
       recentWorks: prepared.recentWorks || "None yet.",
       creativeSeed: xCreativeDirection(),
-      websiteInvitationMode: Math.random() < 0.2
-        ? "INVITATION REQUIRED. Include the exact URL 0x7a70.wiki once. Invite the reader for one specific, naturally integrated reason, such as meeting a particular potato, talking to a potato in the terminal, watching live corruption and hobbies change, reading transmissions, following hidden clues, investigating the first mystery, or seeing what grew while they were absent. Vary the reason and phrasing. Keep the invitation in character rather than sounding like an advertisement."
-        : "NO INVITATION. Do not include 0x7a70.wiki, any other URL, or a request to visit the website in this post.",
     });
 
     let text = "";
@@ -320,7 +326,7 @@ export const publishXPost = internalAction({
         }));
         const words = candidate.split(/\s+/).filter(Boolean).length;
         const sections = candidate.split("\n\n").filter(Boolean).length;
-        if (words >= 30 && words <= 65 && sections >= 2 && sections <= 4 && candidate.length >= 180 && candidate.length <= 275) {
+        if (words >= 30 && words <= 65 && sections >= 2 && sections <= 4 && candidate.length >= 180 && candidate.length <= 275 && !containsOutboundReference(candidate)) {
           text = candidate;
         } else {
           console.warn("x_generation_output_invalid", { attempt, words, sections, characters: candidate.length });
@@ -341,7 +347,7 @@ export const publishXPost = internalAction({
     }
 
     try {
-      const posted = await publishToXWithRetries(text);
+      const posted = await publishOriginalXPostWithRetries(text);
       await ctx.runMutation(internal.x.recordXPost, { postId: posted.id, text: posted.text });
     } catch (error) {
       console.error("x_publish_failed", {

@@ -139,6 +139,7 @@ button, input { font: inherit; }
     brightness(2.45);
 }
 .header-left-links { display: flex; align-items: center; gap: clamp(.65rem, 1.2vw, 1.2rem); min-width: 0; margin-right: auto; }
+.header-directory-links { display: flex; align-items: center; gap: clamp(.65rem, 1.2vw, 1.2rem); }
 .header-contract { color: var(--dim); font-size: clamp(.52rem, .85vw, .72rem); letter-spacing: .035em; white-space: nowrap; }
 .header-section-link { color: var(--dim); font-size: clamp(.56rem, .85vw, .72rem); letter-spacing: .06em; transition: color .2s; }
 .header-section-link:hover { color: var(--bright); }
@@ -561,7 +562,7 @@ button, input { font: inherit; }
 .terminal-form button:disabled { opacity: .25; cursor: default; }
 
 /* hobby */
-.hobby-hero { display: grid; grid-template-columns: 240px minmax(340px, 1fr) minmax(290px, .72fr); gap: clamp(1.2rem, 2.5vw, 2.6rem); align-items: start; }
+.hobby-hero { display: grid; grid-template-columns: 240px minmax(340px, 1fr) minmax(260px, .62fr); gap: clamp(1.2rem, 2.5vw, 2.6rem); align-items: start; }
 .hobby-symbol {
   min-height: 330px; display: grid; place-items: center; border: 1px dashed var(--line);
   color: var(--dim); background: radial-gradient(circle, rgba(51, 140, 74, .14), transparent 68%);
@@ -576,7 +577,7 @@ button, input { font: inherit; }
   text-align: center;
 }
 .hobby-members { margin-top: 4rem; }
-.hobby-side-column { display: grid; gap: 1rem; min-width: 0; }
+.hobby-side-column { display: grid; width: 94%; max-width: 350px; gap: 1rem; min-width: 0; justify-self: end; transform: translateX(.35rem); }
 .hobby-side-column .hobby-members,
 .hobby-side-column .works-archive { margin-top: 0; }
 .hobby-side-column .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .7rem; gap: .55rem; }
@@ -592,6 +593,8 @@ button, input { font: inherit; }
 .work-entry p { margin: .28rem 0 0; color: var(--dim); font-size: .68rem; }
 .work-entry p a { color: #77c983; }
 .work-entry time { flex: 0 0 auto; color: var(--dim); font-size: .62rem; }
+.work-archive-ascii { max-width: 100%; margin: .9rem 0 .15rem; overflow-x: auto; color: var(--green); font: 700 clamp(.54rem, .72vw, .72rem)/1.15 monospace; white-space: pre; }
+.works-page .work-entry > div { width: 100%; }
 .works-empty { padding: 1rem; }
 .work-load-more { display: block; width: 100%; padding: .8rem; }
 .work-hero { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
@@ -607,6 +610,7 @@ button, input { font: inherit; }
 .works-heading h1 { margin: .25rem 0 1.5rem; color: var(--bright); font-size: clamp(3rem, 7vw, 6rem); font-weight: 400; letter-spacing: -.05em; }
 .hobbies-heading h1 { margin: .25rem 0 1.5rem; color: var(--bright); font-size: clamp(3rem, 7vw, 6rem); font-weight: 400; letter-spacing: -.05em; }
 .hobbies-directory { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.hobby-directory-card[href="/hobbies/despair"] { grid-column: 1 / -1; width: calc((100% - 3rem) / 4); justify-self: center; }
 .hobby-directory-card { min-width: 0; min-height: 300px; display: grid; grid-template-rows: auto 1fr auto; padding: 1rem; border: 1px solid var(--line); background: rgba(0, 12, 3, .42); color: var(--green); text-align: center; }
 .hobby-directory-card:hover { border-color: var(--green); background: rgba(9, 36, 14, .52); }
 .hobby-directory-card h2 { margin: 0; color: var(--bright); font-size: .82rem; font-weight: 700; text-transform: lowercase; }
@@ -658,8 +662,9 @@ button, input { font: inherit; }
   .patch-lower, .detail-columns { grid-template-columns: 1fr; }
   .potato-hero { grid-template-columns: minmax(240px, .7fr) 1fr; gap: 2rem; }
   .hobby-hero { grid-template-columns: 220px 1fr; gap: 2rem; }
-  .hobby-side-column { grid-column: 1 / -1; }
+  .hobby-side-column { grid-column: 1 / -1; width: 100%; max-width: none; justify-self: stretch; transform: none; }
   .hobbies-directory { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hobby-directory-card[href="/hobbies/despair"] { width: calc((100% - 2rem) / 3); }
 }
 @media (max-width: 680px) {
   body { font-size: 14px; }
@@ -673,6 +678,7 @@ button, input { font: inherit; }
   .potato-hero, .hobby-hero { grid-template-columns: 1fr; }
   .hobby-side-column { grid-column: auto; }
   .hobbies-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .hobby-directory-card[href="/hobbies/despair"] { width: calc((100% - .6rem) / 2); }
   .hobby-directory-card { min-height: 245px; padding: .65rem; }
   .hobby-directory-card pre { font-size: clamp(.44rem, 2.1vw, .62rem); }
   .portrait-frame { position: relative; top: 0; width: min(430px, 100%); margin: auto; }
@@ -1188,8 +1194,30 @@ button, input { font: inherit; }
     letter-spacing: -.055em;
     white-space: nowrap;
   }
-  .site-header nav { gap: .4rem; }
-  .site-header .header-left-links { gap: .35rem; }
+  .site-header { padding-inline: .45rem; overflow: hidden; }
+  .site-header nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    gap: .28rem;
+    min-width: 0;
+  }
+  .patch-page .site-header nav { gap: .28rem; }
+  .site-header .header-left-links {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: .1rem;
+    min-width: 0;
+  }
+  .site-header .header-directory-links { display: flex; gap: .65rem; min-width: 0; }
+  .site-header .header-contract {
+    max-width: 100%;
+    font-size: clamp(.34rem, 1.65vw, .45rem);
+    line-height: 1.15;
+    letter-spacing: -.04em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .site-header .header-section-link { font-size: .43rem; letter-spacing: 0; }
   .site-header .header-bot-link { font-size: .48rem; letter-spacing: .02em; }
   .site-header .header-telegram-icon img {
@@ -1223,6 +1251,13 @@ button, input { font: inherit; }
   .detail-page .potato-copy .corrupted-description { max-height: none; overflow: visible; }
   .portrait-visuals { grid-template-columns: 1fr; }
   .profile-ascii-potato { font-size: clamp(.45rem, 2.2vw, .62rem); }
+  .detail-shell, .patch-shell, .potato-hero, .hobby-hero, .work-hero,
+  .hobby-side-column, .potato-copy, .work-copy, .work-art-column,
+  .event-panel, .terminal-panel, .works-archive { min-width: 0; max-width: 100%; }
+  .breadcrumbs { flex-wrap: wrap; max-width: 100%; }
+  .description, .corrupted-description, .event p, .terminal-turn, .work-entry p,
+  .work-title-link, .panel-title { overflow-wrap: anywhere; word-break: break-word; }
+  .detail-page pre { max-width: 100%; overflow-x: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }

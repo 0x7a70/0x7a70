@@ -28,6 +28,7 @@ export function WorkArchive({ scope, slug = "" }: { scope: "potato" | "hobby" | 
                   {scope === "global" ? <><Link href={`/potatoes/${work.potatoSlug}`}>{work.potatoName}</Link><span>{" // "}</span><Link href={`/hobbies/${work.hobbySlug}`}>{work.hobbyTitle}</Link><span>{" // "}</span></> : null}
                   {Math.round(work.corruptionAtCreation)}% corruption
                 </p>
+                {scope === "global" && <pre className="work-archive-ascii" aria-hidden="true">{work.webAscii}</pre>}
               </div>
               <RelativeTime timestamp={work.createdAt} />
             </article>
