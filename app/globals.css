@@ -593,8 +593,17 @@ button, input { font: inherit; }
 .work-entry p { margin: .28rem 0 0; color: var(--dim); font-size: .68rem; }
 .work-entry p a { color: #77c983; }
 .work-entry time { flex: 0 0 auto; color: var(--dim); font-size: .62rem; }
-.work-archive-ascii { max-width: 100%; margin: .9rem 0 .15rem; overflow-x: auto; color: var(--green); font: 700 clamp(.54rem, .72vw, .72rem)/1.15 monospace; white-space: pre; }
-.works-page .work-entry > div { width: 100%; }
+.work-entry-description { max-width: 62ch; color: #5eae6d !important; line-height: 1.55; }
+.work-entry-art { flex: 0 0 min(42%, 430px); display: grid; justify-items: end; gap: .35rem; min-width: 0; }
+.work-entry-art > a { display: block; width: 100%; }
+.work-archive-ascii {
+  width: 100%; max-width: 100%; min-height: 150px; display: grid; align-content: center;
+  margin: 0; padding: .8rem; overflow-x: auto; border: 1px dashed var(--line);
+  color: var(--green); background: rgba(0, 12, 3, .34);
+  font: 700 clamp(.5rem, .65vw, .68rem)/1.15 monospace; white-space: pre;
+}
+.works-page .work-entry-copy { flex: 1 1 auto; }
+.works-page .work-entry { align-items: start; }
 .works-empty { padding: 1rem; }
 .work-load-more { display: block; width: 100%; padding: .8rem; }
 .work-hero { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
@@ -843,14 +852,13 @@ button, input { font: inherit; }
   object-fit: contain;
   filter: contrast(1.35) brightness(1.18);
 }
-.potato-hobby-icon.hobby-icon-despair img {
-  filter: brightness(1.55) contrast(1.12);
-}
 .potato-hobby-icon:hover,
 .potato-hobby-icon:focus-visible {
   transform: rotate(var(--hobby-icon-tilt)) scale(1.12);
   filter: drop-shadow(0 0 4px rgba(85, 255, 112, .5));
 }
+.potato-hobby-icon.hobby-icon-despair:hover,
+.potato-hobby-icon.hobby-icon-despair:focus-visible { filter: none; }
 .potato-hover-name {
   position: absolute;
   z-index: 8;
@@ -1258,6 +1266,9 @@ button, input { font: inherit; }
   .description, .corrupted-description, .event p, .terminal-turn, .work-entry p,
   .work-title-link, .panel-title { overflow-wrap: anywhere; word-break: break-word; }
   .detail-page pre { max-width: 100%; overflow-x: auto; }
+  .works-page .work-entry { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .works-page .work-entry-art { width: 100%; max-width: 100%; justify-items: start; }
+  .works-page .work-entry-art time { justify-self: end; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }

@@ -20,7 +20,7 @@ export function WorkArchive({ scope, slug = "" }: { scope: "potato" | "hobby" | 
         <div className="work-list">
           {works.map((work) => (
             <article className="work-entry" key={work._id}>
-              <div>
+              <div className="work-entry-copy">
                 <Link className="work-title-link" href={`/works/${work.slug}`}>{work.title}</Link>
                 <p>
                   {scope === "hobby" ? <><Link href={`/potatoes/${work.potatoSlug}`}>{work.potatoName}</Link><span>{" // "}</span></> : null}
@@ -28,9 +28,16 @@ export function WorkArchive({ scope, slug = "" }: { scope: "potato" | "hobby" | 
                   {scope === "global" ? <><Link href={`/potatoes/${work.potatoSlug}`}>{work.potatoName}</Link><span>{" // "}</span><Link href={`/hobbies/${work.hobbySlug}`}>{work.hobbyTitle}</Link><span>{" // "}</span></> : null}
                   {Math.round(work.corruptionAtCreation)}% corruption
                 </p>
-                {scope === "global" && <pre className="work-archive-ascii" aria-hidden="true">{work.webAscii}</pre>}
+                {scope === "global" && <p className="work-entry-description">{work.description}</p>}
               </div>
-              <RelativeTime timestamp={work.createdAt} />
+              {scope === "global" ? (
+                <div className="work-entry-art">
+                  <RelativeTime timestamp={work.createdAt} />
+                  <Link href={`/works/${work.slug}`} aria-label={`view ${work.title}`}>
+                    <pre className="work-archive-ascii" aria-hidden="true">{work.webAscii}</pre>
+                  </Link>
+                </div>
+              ) : <RelativeTime timestamp={work.createdAt} />}
             </article>
           ))}
           {source.status === "CanLoadMore" && (

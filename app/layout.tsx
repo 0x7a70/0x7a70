@@ -13,15 +13,17 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     images: [{
-      url: "/potato1.png",
-      alt: "0x7a70 potato",
+      url: "/social-preview.png",
+      width: 718,
+      height: 718,
+      alt: "the 0x7a70 potato patch",
     }],
   },
   twitter: {
     card: "summary_large_image",
     title: "enter the potato patch",
     description: "Twenty signals growing beneath the soil.",
-    images: ["/potato1.png"],
+    images: ["/social-preview.png"],
   },
 };
 
