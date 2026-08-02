@@ -27,6 +27,23 @@ export function EventFeed({ potatoSlug }: { potatoSlug?: string }) {
     event.text.toLowerCase().startsWith(`${event.potatoName.toLowerCase()}'s `);
   const eventText = (event: PatchEvent) => {
     const text = withoutRepeatedName(event);
+    if (event.type === "work_created" && event.workSlug && event.workTitle) {
+      const titleIndex = text.toLowerCase().indexOf(event.workTitle.toLowerCase());
+      const hobbyName = event.hobbySlug?.replaceAll("-", " ") || "";
+      const hobbyIndex = hobbyName ? text.toLowerCase().indexOf(hobbyName.toLowerCase()) : -1;
+      if (titleIndex >= 0) {
+        const afterTitle = titleIndex + event.workTitle.length;
+        return (
+          <>
+            {text.slice(0, titleIndex)}
+            <Link className="event-work-link" href={`/works/${event.workSlug}`}>{text.slice(titleIndex, afterTitle)}</Link>
+            {hobbyIndex >= afterTitle && event.hobbySlug ? (
+              <>{text.slice(afterTitle, hobbyIndex)}<Link className="event-hobby-link" href={`/hobbies/${event.hobbySlug}`}>{text.slice(hobbyIndex, hobbyIndex + hobbyName.length)}</Link>{text.slice(hobbyIndex + hobbyName.length)}</>
+            ) : text.slice(afterTitle)}
+          </>
+        );
+      }
+    }
     if (!event.hobbySlug || (event.type !== "hobby_added" && event.type !== "hobby_removed")) return text;
     const hobbyName = event.hobbySlug.replaceAll("-", " ");
     const hobbyIndex = text.toLowerCase().indexOf(hobbyName.toLowerCase());

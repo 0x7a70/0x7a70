@@ -45,6 +45,7 @@ export const initialize = mutation({
     const hobbyDelay = randomDelayAtFrequency(5, 9, PATCH_CHANGE_FREQUENCY);
     const thoughtDelay = randomThoughtDelay();
     const xPostDelay = randomDelay(240, 255);
+    const workDelay = 1_000;
     await ctx.db.insert("automationState", {
       key: "main",
       startedAt: now,
@@ -52,11 +53,13 @@ export const initialize = mutation({
       nextHobbyAt: now + hobbyDelay,
       nextThoughtAt: now + thoughtDelay,
       nextXPostAt: now + xPostDelay,
+      nextWorkAt: now + workDelay,
     });
     await ctx.scheduler.runAfter(corruptionDelay, internal.automation.changeCorruption);
     await ctx.scheduler.runAfter(hobbyDelay, internal.automation.changeHobby);
     await ctx.scheduler.runAfter(thoughtDelay, internal.ai.generateThought);
     await ctx.scheduler.runAfter(xPostDelay, internal.x.publishXPost, {});
+    await ctx.scheduler.runAfter(workDelay, internal.ai.generateWork);
     return { initialized: true, potatoes: POTATOES.length, hobbies: HOBBIES.length };
   },
 });

@@ -2,13 +2,14 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation } from "./_generated/server";
 import { fill, openRouter } from "./ai";
-import { corruptionModifier, randomDelay } from "./data";
+import { corruptionModifier, randomDelay, randomInt } from "./data";
 import { PERSONALITIES, X_ASCII_ART, X_POST_PROMPT } from "./generatedContent";
 
 const X_POST_MINUTES = 240;
 const X_POST_MAX_MINUTES = 255;
 const X_POST_URL = "https://api.x.com/2/tweets";
 const ASCII_POST_CHANCE = 0.2;
+const WORK_POST_CHANCE = 0.2;
 const X_PUBLISH_ATTEMPTS = 3;
 const X_RETRY_MINUTES = 5;
 const X_SCHEDULED_RETRIES = 3;
@@ -130,7 +131,7 @@ async function publishToXWithRetries(text: string) {
 }
 
 export const prepareXPost = internalMutation({
-  args: { isRetry: v.boolean(), asciiArtId: v.optional(v.string()) },
+  args: { isRetry: v.boolean(), asciiArtId: v.optional(v.string()), workId: v.optional(v.id("works")) },
   handler: async (ctx, args) => {
     const now = Date.now();
     const state = await ctx.db
@@ -154,10 +155,25 @@ export const prepareXPost = internalMutation({
       .unique();
     if (!potato) return null;
 
+    let work = args.workId ? await ctx.db.get(args.workId) : null;
+    if (!work && !args.isRetry && Math.random() < WORK_POST_CHANCE) {
+      const works = await ctx.db.query("works").order("desc").collect();
+      const shares = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "x").eq("status", "posted")).collect();
+      const pending = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "x").eq("status", "pending")).collect();
+      const unavailable = new Set([...shares, ...pending.filter((share) => now - share.reservedAt < 30 * 60_000)].map((share) => String(share.workId)));
+      const available = works.filter((candidate) => !unavailable.has(String(candidate._id)));
+      work = available.length ? available[randomInt(0, available.length - 1)] : null;
+      if (work) {
+        const stale = pending.find((share) => String(share.workId) === String(work!._id));
+        if (stale) await ctx.db.delete(stale._id);
+        await ctx.db.insert("workShares", { workId: work._id, platform: "x", status: "pending", reservedAt: now });
+      }
+    }
+
     let asciiArt: { id: string; text: string } | null = null;
-    if (args.asciiArtId) {
+    if (!work && args.asciiArtId) {
       asciiArt = X_ASCII_ART.find((art) => art.id === args.asciiArtId) || null;
-    } else if (!args.isRetry && Math.random() < ASCII_POST_CHANCE) {
+    } else if (!work && !args.isRetry && Math.random() < ASCII_POST_CHANCE) {
       const usage = await ctx.db.query("xAsciiUsage").collect();
       const counts = new Map(usage.map((entry) => [entry.asciiArtId, entry.postCount]));
       const minimumCount = Math.min(...X_ASCII_ART.map((art) => counts.get(art.id) || 0));
@@ -165,23 +181,23 @@ export const prepareXPost = internalMutation({
       asciiArt = available[Math.floor(Math.random() * available.length)] || null;
     }
 
-    return { potato, asciiArt };
+    return { potato, asciiArt, work };
   },
 });
 
 export const scheduleXRetry = internalMutation({
-  args: { retryAttempt: v.number(), asciiArtId: v.optional(v.string()) },
+  args: { retryAttempt: v.number(), asciiArtId: v.optional(v.string()), workId: v.optional(v.id("works")) },
   handler: async (ctx, args) => {
     await ctx.scheduler.runAfter(
       X_RETRY_MINUTES * 60_000,
       internal.x.publishXPost,
-      { retryAttempt: args.retryAttempt, ...(args.asciiArtId ? { asciiArtId: args.asciiArtId } : {}) },
+      { retryAttempt: args.retryAttempt, ...(args.asciiArtId ? { asciiArtId: args.asciiArtId } : {}), ...(args.workId ? { workId: args.workId } : {}) },
     );
   },
 });
 
 export const recordXPost = internalMutation({
-  args: { postId: v.string(), text: v.string(), asciiArtId: v.optional(v.string()) },
+  args: { postId: v.string(), text: v.string(), asciiArtId: v.optional(v.string()), workId: v.optional(v.id("works")) },
   handler: async (ctx, args) => {
     await ctx.db.insert("xPosts", { ...args, createdAt: Date.now() });
     if (args.asciiArtId) {
@@ -202,18 +218,52 @@ export const recordXPost = internalMutation({
         });
       }
     }
+    if (args.workId) {
+      const share = await ctx.db.query("workShares").withIndex("by_work_platform", (q) => q.eq("workId", args.workId!).eq("platform", "x")).unique();
+      if (share) await ctx.db.patch(share._id, { status: "posted", postedAt: Date.now(), externalId: args.postId });
+    }
+  },
+});
+
+export const releaseXWork = internalMutation({
+  args: { workId: v.id("works") },
+  handler: async (ctx, { workId }) => {
+    const share = await ctx.db.query("workShares").withIndex("by_work_platform", (q) => q.eq("workId", workId).eq("platform", "x")).unique();
+    if (share?.status === "pending") await ctx.db.delete(share._id);
   },
 });
 
 export const publishXPost = internalAction({
-  args: { retryAttempt: v.optional(v.number()), asciiArtId: v.optional(v.string()) },
+  args: { retryAttempt: v.optional(v.number()), asciiArtId: v.optional(v.string()), workId: v.optional(v.id("works")) },
   handler: async (ctx, args) => {
     const retryAttempt = args.retryAttempt || 0;
     const prepared = await ctx.runMutation(internal.x.prepareXPost, {
       isRetry: retryAttempt > 0,
       ...(args.asciiArtId ? { asciiArtId: args.asciiArtId } : {}),
+      ...(args.workId ? { workId: args.workId } : {}),
     });
     if (!prepared) return;
+
+    if (prepared.work) {
+      const enSpace = "\u2002";
+      const socialArt = prepared.work.xAscii.split("\n").map((line: string, index: number) => {
+        const leading = line.match(/^ */)?.[0].length || 0;
+        return `${index === 0 ? "\u2060" : ""}${enSpace.repeat(Math.round(leading * .6))}${line.slice(leading).replaceAll(" ", enSpace)}`;
+      }).join("\n");
+      const workText = `${prepared.work.potatoName} ${prepared.work.shareAction} ${prepared.work.title}.\n\n${prepared.work.shareSummary}\n\n${socialArt}`;
+      try {
+        const posted = await publishToXWithRetries(workText);
+        await ctx.runMutation(internal.x.recordXPost, { postId: posted.id, text: posted.text, workId: prepared.work._id });
+      } catch (error) {
+        console.error("x_work_publish_failed", { workId: prepared.work._id, message: error instanceof Error ? error.message : "unknown" });
+        if (retryAttempt < X_SCHEDULED_RETRIES) {
+          await ctx.runMutation(internal.x.scheduleXRetry, { retryAttempt: retryAttempt + 1, workId: prepared.work._id });
+        } else {
+          await ctx.runMutation(internal.x.releaseXWork, { workId: prepared.work._id });
+        }
+      }
+      return;
+    }
 
     if (prepared.asciiArt) {
       try {

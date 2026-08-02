@@ -23,6 +23,7 @@ export default defineSchema({
       v.literal("hobby_added"),
       v.literal("hobby_removed"),
       v.literal("thought"),
+      v.literal("work_created"),
     ),
     potatoSlug: v.string(),
     potatoName: v.string(),
@@ -30,6 +31,8 @@ export default defineSchema({
     createdAt: v.number(),
     delta: v.optional(v.number()),
     hobbySlug: v.optional(v.string()),
+    workSlug: v.optional(v.string()),
+    workTitle: v.optional(v.string()),
   })
     .index("by_created_at", ["createdAt"])
     .index("by_potato_created_at", ["potatoSlug", "createdAt"]),
@@ -40,6 +43,7 @@ export default defineSchema({
     nextHobbyAt: v.optional(v.number()),
     nextThoughtAt: v.optional(v.number()),
     nextXPostAt: v.optional(v.number()),
+    nextWorkAt: v.optional(v.number()),
     startedAt: v.number(),
   }).index("by_key", ["key"]),
 
@@ -55,6 +59,43 @@ export default defineSchema({
     postCount: v.number(),
     lastPostedAt: v.number(),
   }).index("by_ascii_art_id", ["asciiArtId"]),
+
+  works: defineTable({
+    generationId: v.string(),
+    slug: v.string(),
+    potatoSlug: v.string(),
+    potatoName: v.string(),
+    hobbySlug: v.string(),
+    hobbyTitle: v.string(),
+    title: v.string(),
+    description: v.string(),
+    shareSummary: v.string(),
+    shareAction: v.string(),
+    webAscii: v.string(),
+    xAscii: v.string(),
+    telegramAscii: v.string(),
+    corruptionAtCreation: v.number(),
+    fingerprint: v.string(),
+    promptVersion: v.number(),
+    generationAttempts: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_generation_id", ["generationId"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_potato_created_at", ["potatoSlug", "createdAt"])
+    .index("by_hobby_created_at", ["hobbySlug", "createdAt"]),
+
+  workShares: defineTable({
+    workId: v.id("works"),
+    platform: v.union(v.literal("x"), v.literal("telegram")),
+    status: v.union(v.literal("pending"), v.literal("posted")),
+    reservedAt: v.number(),
+    postedAt: v.optional(v.number()),
+    externalId: v.optional(v.string()),
+  })
+    .index("by_work_platform", ["workId", "platform"])
+    .index("by_platform_status", ["platform", "status"]),
 
   tokenTelemetry: defineTable({
     key: v.string(),

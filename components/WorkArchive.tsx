@@ -1,0 +1,40 @@
+"use client";
+
+import Link from "next/link";
+import { usePaginatedQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Work } from "@/lib/types";
+import { RelativeTime } from "./RelativeTime";
+
+export function WorkArchive({ scope, slug }: { scope: "potato" | "hobby"; slug: string }) {
+  const potatoWorks = usePaginatedQuery(api.queries.potatoWorks, { slug }, { initialNumItems: 8 });
+  const hobbyWorks = usePaginatedQuery(api.queries.hobbyWorks, { slug }, { initialNumItems: 8 });
+  const source = scope === "potato" ? potatoWorks : hobbyWorks;
+  const works = source.results as Array<Work & { _id: string }>;
+
+  return (
+    <section className="works-archive">
+      <div className="panel-title"><h2>permanent works</h2><span>{works.length}{source.status === "Exhausted" ? " recovered" : "+ recovered"}</span></div>
+      {works.length ? (
+        <div className="work-list">
+          {works.map((work) => (
+            <article className="work-entry" key={work._id}>
+              <div>
+                <Link className="work-title-link" href={`/works/${work.slug}`}>{work.title}</Link>
+                <p>
+                  {scope === "hobby" ? <><Link href={`/potatoes/${work.potatoSlug}`}>{work.potatoName}</Link><span>{" // "}</span></> : null}
+                  {scope === "potato" ? <><Link href={`/hobbies/${work.hobbySlug}`}>{work.hobbyTitle}</Link><span>{" // "}</span></> : null}
+                  {Math.round(work.corruptionAtCreation)}% corruption
+                </p>
+              </div>
+              <RelativeTime timestamp={work.createdAt} />
+            </article>
+          ))}
+          {source.status === "CanLoadMore" && (
+            <button className="plain-button work-load-more" onClick={() => source.loadMore(8)}>unearth older works</button>
+          )}
+        </div>
+      ) : <p className="muted works-empty">no work has surfaced here yet.</p>}
+    </section>
+  );
+}

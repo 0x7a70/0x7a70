@@ -11,6 +11,7 @@ import { SiteHeader } from "./SiteHeader";
 import { Terminal } from "./Terminal";
 import { CorruptedDescription } from "./CorruptedDescription";
 import { profilePotatoAscii } from "@/lib/potatoAscii";
+import { WorkArchive } from "./WorkArchive";
 
 type StaticPotato = {
   name: string;
@@ -84,6 +85,8 @@ export function PotatoView({ staticPotato }: { staticPotato: StaticPotato }) {
           </div>
           <Terminal potatoSlug={potato.slug} potatoName={potato.name} />
         </section>
+
+        <WorkArchive scope="potato" slug={potato.slug} />
 
       </div>
     </main>

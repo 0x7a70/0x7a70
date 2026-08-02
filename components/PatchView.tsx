@@ -165,7 +165,7 @@ export function PatchView() {
                 </Link>
                 {featuredHobby && featuredHobbyIcon ? (
                   <Link
-                    className={`potato-hobby-icon ${index % 2 === 0 ? "hobby-icon-left" : "hobby-icon-right"}`}
+                    className={`potato-hobby-icon hobby-icon-${featuredHobby} ${index % 2 === 0 ? "hobby-icon-left" : "hobby-icon-right"}`}
                     href={`/hobbies/${featuredHobby}`}
                     aria-label={`open ${featuredHobby.replaceAll("-", " ")}`}
                     title={featuredHobby.replaceAll("-", " ")}

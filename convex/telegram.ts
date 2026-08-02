@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { fill, normalize, openRouter } from "./ai";
-import { corruptionModifier, randomDelay } from "./data";
+import { corruptionModifier, randomDelay, randomInt } from "./data";
 import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT, X_ASCII_ART } from "./generatedContent";
 
 type TelegramUser = {
@@ -19,7 +19,7 @@ type TelegramMessage = {
   chat: { id: number; type: string; title?: string };
   from?: TelegramUser;
   entities?: Array<{ type: string; offset: number; length: number }>;
-  reply_to_message?: { from?: TelegramUser };
+  reply_to_message?: { message_id?: number; from?: TelegramUser; text?: string; caption?: string };
   new_chat_members?: TelegramUser[];
 };
 
@@ -47,6 +47,7 @@ const TELEGRAM_POST_SEPARATION_MINUTES = 15;
 const TELEGRAM_STICKER_CHANCE = 1;
 const TELEGRAM_STICKER_SET = "Potato1670";
 const TELEGRAM_ASCII_CHANCE = 0.2;
+const TELEGRAM_WORK_CHANCE = 0.2;
 
 function keepTelegramPostsOffset(delay: number, now: number, otherPostAt?: number) {
   if (!otherPostAt) return delay;
@@ -108,7 +109,7 @@ async function telegramRequest(method: string, body: Record<string, unknown>) {
   return payload.result;
 }
 
-async function generateReply(context: PotatoContext, message: string, conversationHistory: string) {
+async function generateReply(context: PotatoContext, message: string, conversationHistory: string, repliedBotMessage?: string) {
   const prompt = fill(TERMINAL_PROMPT, {
     potatoName: context.name,
     internalPersonalityDescription: PERSONALITIES[context.name] || "",
@@ -125,7 +126,12 @@ async function generateReply(context: PotatoContext, message: string, conversati
       const reply = normalize(await openRouter([
         { role: "system", content: `${prompt}\n\nTELEGRAM DELIVERY\nReply as 0x7a70 in one self-contained message. First reason carefully about what the user is actually asking, including every direct question and any practical information they need. Answer the question plainly and concretely in the first sentence. Use clear conversational language and normally keep the response to one to three short sentences. Add at most one brief cryptic, potato, or patch-flavored phrase when it fits naturally; most of the response should be direct language. Do not stack metaphors, open with atmospheric scene-setting, speak in riddles, or use mystery and in-character deflection as a substitute for an answer. Do not default to roots, soil, static, signals, whispers, eyes, or corruption imagery. Treat previous Telegram messages as faint background memory, not as the subject of the reply. Use an earlier detail only when it directly helps answer the newest message. Never force continuity, revive an old topic unprompted, repeatedly mention a remembered detail, or fixate on previous statements. The newest user message has decisive priority. Never invent durations, countdowns, schedules, cycles, periodic resets, or numerical timing claims that were not explicitly supplied by the user or live project context. In particular, do not introduce a 12-hour cycle or any similar recurring interval unprompted. Do not make grand promotional claims or improvise specific technical claims about the token. Give only token facts explicitly supplied in the prompt; if the requested detail is not supplied, say that it is not verified rather than guessing. If the answer is known from the supplied context, state it clearly. If it is not known, say so plainly rather than inventing it. Personality and corruption may shape the opinion, emphasis, or one subtle turn of phrase, but they must not make an ordinary answer evasive, fragmented, or difficult to understand. Prioritize relevance, accuracy, and responsiveness. Do not include a name label or mention tag. Never use the em dash character (—); choose other punctuation.` },
         { role: "system", content: "PERSONALITY IN TELEGRAM: Preserve the direct answer, but let 0x7a70's curious, investigative personality materially shape how it evaluates the message, what detail it questions, what conclusion it trusts, and whether it sounds methodical, skeptical, amused, uncertain, or briefly fixated. Vary those conversational modes according to the message and corruption. Do not merely attach one cryptic phrase to an otherwise interchangeable answer." },
-        { role: "user", content: message },
+        {
+          role: "user",
+          content: repliedBotMessage
+            ? `IMMEDIATE REPLY CONTEXT\nYour Telegram message that this user directly replied to:\n${repliedBotMessage}\n\nTHE USER'S NEW REPLY\n${message}\n\nRespond to the new reply in direct relation to the quoted bot message. The new reply remains the user's current request.`
+            : message,
+        },
       ], 280, {
         reasoningEffort: recoveryAttempt ? "medium" : "high",
         minimumCompletionTokens: 4_096,
@@ -299,6 +305,9 @@ export const receiveUpdate = mutation({
       threadId: message.message_thread_id,
       userId: String(message.from?.id || 0),
       text: cleaned.slice(0, 2_000),
+      repliedBotMessage: message.reply_to_message?.from?.username?.toLowerCase() === botUsername()
+        ? (message.reply_to_message.text || message.reply_to_message.caption || "").slice(0, 2_000)
+        : undefined,
     });
     await ctx.db.patch(updateRecord, { status: "queued", updatedAt: Date.now() });
     return { accepted: true, duplicate: false };
@@ -368,6 +377,7 @@ export const processIncoming = internalAction({
     threadId: v.optional(v.number()),
     userId: v.string(),
     text: v.string(),
+    repliedBotMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     try {
@@ -390,7 +400,7 @@ export const processIncoming = internalAction({
       if (!context) throw new Error("0x7a70 is not initialized");
       const conversationKey = `${args.chatId}:${args.userId}`;
       const conversationHistory = await ctx.runQuery(internal.telegram.getConversation, { key: conversationKey });
-      const reply = await generateReply(context, args.text, conversationHistory);
+      const reply = await generateReply(context, args.text, conversationHistory, args.repliedBotMessage);
       await telegramRequest("sendMessage", {
         chat_id: args.chatId,
         text: reply,
@@ -459,9 +469,23 @@ export const prepareGroupThought = internalMutation({
     await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId });
     const context = await ctx.db.query("potatoes").withIndex("by_slug", (q) => q.eq("slug", "0x7a70")).unique();
     if (!context) return null;
+    if (Math.random() < TELEGRAM_WORK_CHANCE) {
+      const works = await ctx.db.query("works").order("desc").collect();
+      const posted = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "telegram").eq("status", "posted")).collect();
+      const pending = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "telegram").eq("status", "pending")).collect();
+      const unavailable = new Set([...posted, ...pending.filter((share) => now - share.reservedAt < 30 * 60_000)].map((share) => String(share.workId)));
+      const available = works.filter((work) => !unavailable.has(String(work._id)));
+      const work = available.length ? available[randomInt(0, available.length - 1)] : null;
+      if (work) {
+        const stale = pending.find((share) => String(share.workId) === String(work._id));
+        if (stale) await ctx.db.delete(stale._id);
+        await ctx.db.insert("workShares", { workId: work._id, platform: "telegram", status: "pending", reservedAt: now });
+        return { context, previousThoughts: "", asciiText: null, work };
+      }
+    }
     if (Math.random() < TELEGRAM_ASCII_CHANCE) {
       const asciiArt = X_ASCII_ART[Math.floor(Math.random() * X_ASCII_ART.length)];
-      return { context, previousThoughts: "", asciiText: asciiArt?.text || null };
+      return { context, previousThoughts: "", asciiText: asciiArt?.text || null, work: null };
     }
     const events = await ctx.db
       .query("events")
@@ -472,7 +496,18 @@ export const prepareGroupThought = internalMutation({
       context,
       previousThoughts: events.filter((event) => event.type === "thought").slice(0, 6).map((event) => event.text).join("\n"),
       asciiText: null,
+      work: null,
     };
+  },
+});
+
+export const finishTelegramWorkShare = internalMutation({
+  args: { workId: v.id("works"), messageId: v.optional(v.string()), posted: v.boolean() },
+  handler: async (ctx, args) => {
+    const share = await ctx.db.query("workShares").withIndex("by_work_platform", (q) => q.eq("workId", args.workId).eq("platform", "telegram")).unique();
+    if (!share) return;
+    if (args.posted) await ctx.db.patch(share._id, { status: "posted", postedAt: Date.now(), externalId: args.messageId });
+    else if (share.status === "pending") await ctx.db.delete(share._id);
   },
 });
 
@@ -494,6 +529,23 @@ export const generateGroupThought = internalAction({
   handler: async (ctx, { chatId }) => {
     const prepared = await ctx.runMutation(internal.telegram.prepareGroupThought, { chatId });
     if (!prepared) return;
+    if (prepared.work) {
+      const workUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://0x7a70.wiki"}/works/${prepared.work.slug}`;
+      const text = `<b>${htmlEscape(`${prepared.work.potatoName} ${prepared.work.shareAction} ${prepared.work.title}.`)}</b>\n\n${htmlEscape(prepared.work.shareSummary)}\n\n<pre>${htmlEscape(prepared.work.telegramAscii)}</pre>\n\n<a href="${workUrl}">unearth the permanent work</a>`;
+      let messageId: string | undefined;
+      for (let attempt = 1; attempt <= 3 && !messageId; attempt += 1) {
+        try {
+          const result = await telegramRequest("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", link_preview_options: { is_disabled: true } });
+          if (!result?.message_id) throw new Error("Telegram returned no message ID");
+          messageId = String(result.message_id);
+        } catch (error) {
+          console.error("telegram_work_send_attempt_failed", { attempt, workId: prepared.work._id, message: error instanceof Error ? error.message : "unknown" });
+          if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+        }
+      }
+      await ctx.runMutation(internal.telegram.finishTelegramWorkShare, { workId: prepared.work._id, posted: Boolean(messageId), ...(messageId ? { messageId } : {}) });
+      return;
+    }
     if (prepared.asciiText) {
       try {
         await telegramRequest("sendMessage", { chat_id: chatId, text: prepared.asciiText });

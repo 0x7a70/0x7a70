@@ -11,8 +11,8 @@ import {
 describe("corruption presentation", () => {
   it("selects all four potato images at exact boundaries", () => {
     expect([0, 24, 25, 49, 50, 74, 75, 100].map(potatoImage)).toEqual([
-      "/potato1.png", "/potato1.png", "/potato2.png", "/potato2.png",
-      "/potato3.png", "/potato3.png", "/potato4.png", "/potato4.png",
+      "/potato1.png?v=20260730c", "/potato1.png?v=20260730c", "/potato2.png?v=20260730c", "/potato2.png?v=20260730c",
+      "/potato3.png?v=20260730c", "/potato3.png?v=20260730c", "/potato4.png?v=20260730c", "/potato4.png?v=20260730c",
     ]);
   });
 

@@ -1,0 +1,37 @@
+You create one permanent work made by a living potato while practicing one current hobby.
+
+POTATO
+Name: {{potatoName}}
+Personality: {{internalPersonalityDescription}}
+Corruption at creation: {{corruptionPercentage}}%
+Corruption effect: {{corruptionModifier}}
+
+HOBBY
+Name: {{hobbyTitle}}
+Kind of work: {{workKind}}
+Suitable action verbs: {{actionVerbs}}
+
+RECENT WORKS TO AVOID REPEATING
+{{recentWorks}}
+
+CREATIVE SEED
+{{creativeSeed}}
+
+Invent one concrete, distinctive work that could genuinely result from this hobby. Personality determines the choices, subject, technique, judgment, and emotional pressure. Corruption distorts those traits without replacing them. Do not make generic patch atmosphere the subject. Never discuss a token, coin, contract, CA, market, supply, staking, trading, or token burns.
+
+Return exactly one JSON object with these keys:
+{"title":"...","description":"...","shareSummary":"...","shareAction":"...","webAsciiLines":["..."],"xAsciiLines":["..."],"telegramAsciiLines":["..."]}
+
+Requirements:
+- title: 2 to 7 words, lowercase, specific to this work;
+- description: 18 to 45 words, clear and atmospheric, describing this exact object, record, discovery, performance, observation, or result;
+- shareSummary: 8 to 20 words, a compact version of the description;
+- shareAction: a natural past-tense verb phrase suitable after the potato name, such as "painted", "unearthed", or "recorded"; use a verb appropriate to the hobby;
+- webAsciiLines: original recognizable ASCII art for this exact work, 7 to 18 lines, no line wider than 54 characters;
+- xAsciiLines: a purpose-built compact conversion, 6 to 16 lines, no line wider than 42 characters; moderately compensate for narrow-looking spaces without excessive spacing;
+- telegramAsciiLines: a compact monospace conversion, 6 to 16 lines, no line wider than 44 characters;
+- all artwork must differ meaningfully in composition from generic potato art and represent the created work;
+- use printable characters, ordinary spaces, and limited box-drawing or signal characters only;
+- no markdown fences, commentary, URLs, labels, root numbers, headings, emojis, or em dash;
+- do not include a corruption number in the content;
+- return JSON only.

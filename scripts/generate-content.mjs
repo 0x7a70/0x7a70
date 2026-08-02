@@ -27,6 +27,7 @@ const personalities = Object.fromEntries(
 const thoughtPrompt = repair(fs.readFileSync(path.join(root, "content", "prompts", "potato thought.txt"), "utf8")).trim();
 const terminalPrompt = repair(fs.readFileSync(path.join(root, "content", "prompts", "user interaction.txt"), "utf8")).trim();
 const xPostPrompt = repair(fs.readFileSync(path.join(root, "content", "prompts", "x posting.txt"), "utf8")).trim();
+const workPrompt = repair(fs.readFileSync(path.join(root, "content", "prompts", "potato work.txt"), "utf8")).trim();
 
 const decodeTemplateArt = (value) => value.replaceAll("\\\\", "\\");
 const wordJoiner = "\u2060";
@@ -93,6 +94,7 @@ const source = `// Generated from the canonical source documents by scripts/gene
   `export const THOUGHT_PROMPT = ${JSON.stringify(thoughtPrompt)};\n\n` +
   `export const TERMINAL_PROMPT = ${JSON.stringify(terminalPrompt)};\n\n` +
   `export const X_POST_PROMPT = ${JSON.stringify(xPostPrompt)};\n\n` +
+  `export const WORK_PROMPT = ${JSON.stringify(workPrompt)};\n\n` +
   `export const X_ASCII_ART: ReadonlyArray<{ id: string; text: string }> = ${JSON.stringify(xAsciiArt, null, 2)};\n`;
 
 fs.writeFileSync(path.join(root, "convex", "generatedContent.ts"), source);

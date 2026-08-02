@@ -15,6 +15,10 @@ Your previous thoughts, if any:
 
 Generate one new private thought from {{potatoName}}.
 
+AUTONOMOUS TOKEN SILENCE
+
+This is an autonomous private thought, so no user has asked about the token. Never mention or allude to $0x7a70 as a token or coin, its contract or CA, price, market, supply, burns of supply, staking, rewards, liquidity, trading, wallets, exchanges, or any other crypto-asset subject. The potato named 0x7a70 may still appear as a living character, but do not frame that name as an asset. Fire may appear only as ordinary physical or mythic patch imagery, never as a token burn or supply mechanic.
+
 PERSONALITY DIFFERENTIATION
 
 Before writing, reason silently through a personality fingerprint for this specific potato:

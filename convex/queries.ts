@@ -64,3 +64,27 @@ export const burnTelemetry = query({
   handler: (ctx) =>
     ctx.db.query("tokenTelemetry").withIndex("by_key", (q) => q.eq("key", "0x7a70-burn")).unique(),
 });
+
+export const getWork = query({
+  args: { slug: v.string() },
+  handler: (ctx, { slug }) =>
+    ctx.db.query("works").withIndex("by_slug", (q) => q.eq("slug", slug)).unique(),
+});
+
+export const potatoWorks = query({
+  args: { slug: v.string(), paginationOpts: paginationOptsValidator },
+  handler: (ctx, { slug, paginationOpts }) =>
+    ctx.db.query("works")
+      .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", slug))
+      .order("desc")
+      .paginate(paginationOpts),
+});
+
+export const hobbyWorks = query({
+  args: { slug: v.string(), paginationOpts: paginationOptsValidator },
+  handler: (ctx, { slug, paginationOpts }) =>
+    ctx.db.query("works")
+      .withIndex("by_hobby_created_at", (q) => q.eq("hobbySlug", slug))
+      .order("desc")
+      .paginate(paginationOpts),
+});

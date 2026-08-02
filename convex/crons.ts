@@ -9,4 +9,10 @@ crons.interval(
   internal.automation.refreshBurnTelemetry,
 );
 
+crons.interval(
+  "keep potato works growing",
+  { minutes: 1 },
+  internal.ai.ensureWorkLoop,
+);
+
 export default crons;

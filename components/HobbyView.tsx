@@ -9,6 +9,7 @@ import { corruptionStage, potatoImage } from "@/lib/constants";
 import type { Potato } from "@/lib/types";
 import { CorruptedDescription } from "./CorruptedDescription";
 import { SiteHeader } from "./SiteHeader";
+import { WorkArchive } from "./WorkArchive";
 
 const HOBBY_ASCII: Record<string, string> = {
   "amateur-archaeology": `       __
@@ -247,6 +248,7 @@ export function HobbyView({ hobby }: { hobby: { title: string; slug: string; des
             </div>
           ) : <p className="muted">{despair ? "no potato is currently empty enough to appear here." : "no potato currently admits to this practice."}</p>}
         </section>
+        {!despair && <WorkArchive scope="hobby" slug={hobby.slug} />}
       </div>
     </main>
   );
