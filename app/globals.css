@@ -117,7 +117,7 @@ button, input { font: inherit; }
   border-bottom: 1px solid var(--line); background: #000; backdrop-filter: blur(8px);
 }
 .site-header nav { display: flex; align-items: center; width: 100%; gap: 1.15rem; }
-.site-header nav a:not(.header-contract):not(.header-bot-link) {
+.site-header nav a:not(.header-contract):not(.header-bot-link):not(.header-section-link) {
   display: grid;
   place-items: center;
   opacity: .96;
@@ -129,7 +129,7 @@ button, input { font: inherit; }
     brightness(2.1);
   transition: opacity .2s, filter .2s;
 }
-.site-header nav a:not(.header-contract):not(.header-bot-link):hover {
+.site-header nav a:not(.header-contract):not(.header-bot-link):not(.header-section-link):hover {
   opacity: 1;
   filter:
     grayscale(0)
@@ -138,7 +138,10 @@ button, input { font: inherit; }
     saturate(3.4)
     brightness(2.45);
 }
-.header-contract { margin-right: auto; color: var(--dim); font-size: clamp(.52rem, .85vw, .72rem); letter-spacing: .035em; }
+.header-left-links { display: flex; align-items: center; gap: clamp(.65rem, 1.2vw, 1.2rem); min-width: 0; margin-right: auto; }
+.header-contract { color: var(--dim); font-size: clamp(.52rem, .85vw, .72rem); letter-spacing: .035em; white-space: nowrap; }
+.header-section-link { color: var(--dim); font-size: clamp(.56rem, .85vw, .72rem); letter-spacing: .06em; transition: color .2s; }
+.header-section-link:hover { color: var(--bright); }
 .header-bot-link {
   color: var(--dim);
   font-size: clamp(.58rem, .9vw, .76rem);
@@ -558,7 +561,7 @@ button, input { font: inherit; }
 .terminal-form button:disabled { opacity: .25; cursor: default; }
 
 /* hobby */
-.hobby-hero { display: grid; grid-template-columns: 280px 1fr; gap: clamp(2rem, 6vw, 6rem); align-items: start; }
+.hobby-hero { display: grid; grid-template-columns: 240px minmax(340px, 1fr) minmax(290px, .72fr); gap: clamp(1.2rem, 2.5vw, 2.6rem); align-items: start; }
 .hobby-symbol {
   min-height: 330px; display: grid; place-items: center; border: 1px dashed var(--line);
   color: var(--dim); background: radial-gradient(circle, rgba(51, 140, 74, .14), transparent 68%);
@@ -573,6 +576,14 @@ button, input { font: inherit; }
   text-align: center;
 }
 .hobby-members { margin-top: 4rem; }
+.hobby-side-column { display: grid; gap: 1rem; min-width: 0; }
+.hobby-side-column .hobby-members,
+.hobby-side-column .works-archive { margin-top: 0; }
+.hobby-side-column .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .7rem; gap: .55rem; }
+.hobby-side-column .member-grid a { min-width: 0; padding: .4rem; }
+.hobby-side-column .member-grid img { width: 54px; height: 54px; }
+.hobby-side-column .member-grid span { font-size: .58rem; }
+.hobby-side-column .work-list { max-height: 360px; overflow-y: auto; }
 .works-archive { margin-top: 2rem; }
 .work-list { padding: 0 1rem; }
 .work-entry { display: flex; justify-content: space-between; gap: 1rem; padding: .85rem 0; border-bottom: 1px dotted rgba(68, 190, 88, .18); }
@@ -585,12 +596,22 @@ button, input { font: inherit; }
 .work-load-more { display: block; width: 100%; padding: .8rem; }
 .work-hero { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
 .work-art-panel { position: relative; min-height: 430px; display: grid; place-items: center; padding: 2.5rem 1.1rem 1.2rem; overflow: hidden; }
+.work-art-column { min-width: 0; }
+.work-art-column .corruption-meter { margin: 1rem auto 0; }
 .work-ascii { max-width: 100%; margin: 0; overflow-x: auto; color: var(--green); font: 700 clamp(.64rem, 1.15vw, .92rem)/1.15 monospace; text-shadow: 1px 0 var(--faint); white-space: pre; }
 .work-copy h1 { margin: .25rem 0 0; color: var(--bright); font-weight: 400; letter-spacing: -.05em; line-height: .95; }
 .work-copy .eyebrow a { color: var(--bright); }
 .work-copy .corruption-meter { margin: 1.4rem 0; }
 .work-created-time { color: var(--dim); font-size: .68rem; }
 .work-loading { padding: 8rem 1rem; color: var(--dim); text-align: center; }
+.works-heading h1 { margin: .25rem 0 1.5rem; color: var(--bright); font-size: clamp(3rem, 7vw, 6rem); font-weight: 400; letter-spacing: -.05em; }
+.hobbies-heading h1 { margin: .25rem 0 1.5rem; color: var(--bright); font-size: clamp(3rem, 7vw, 6rem); font-weight: 400; letter-spacing: -.05em; }
+.hobbies-directory { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.hobby-directory-card { min-width: 0; min-height: 300px; display: grid; grid-template-rows: auto 1fr auto; padding: 1rem; border: 1px solid var(--line); background: rgba(0, 12, 3, .42); color: var(--green); text-align: center; }
+.hobby-directory-card:hover { border-color: var(--green); background: rgba(9, 36, 14, .52); }
+.hobby-directory-card h2 { margin: 0; color: var(--bright); font-size: .82rem; font-weight: 700; text-transform: lowercase; }
+.hobby-directory-card pre { align-self: center; max-width: 100%; margin: 1rem auto; overflow: hidden; color: #55dc6e; font: 700 clamp(.55rem, .72vw, .72rem)/1.15 monospace; text-align: left; white-space: pre; }
+.hobby-directory-card p { margin: 0; color: var(--dim); font-size: .66rem; line-height: 1.45; }
 .member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1px; background: var(--line); }
 .member-grid a { display: flex; align-items: center; gap: .6rem; padding: .8rem; background: #020704; }
 .member-grid img { width: 70px; height: 70px; object-fit: contain; mix-blend-mode: screen; }
@@ -637,6 +658,8 @@ button, input { font: inherit; }
   .patch-lower, .detail-columns { grid-template-columns: 1fr; }
   .potato-hero { grid-template-columns: minmax(240px, .7fr) 1fr; gap: 2rem; }
   .hobby-hero { grid-template-columns: 220px 1fr; gap: 2rem; }
+  .hobby-side-column { grid-column: 1 / -1; }
+  .hobbies-directory { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
   body { font-size: 14px; }
@@ -648,6 +671,10 @@ button, input { font: inherit; }
   .potato-card:nth-of-type(4n) { --mobile-offset: -1rem; }
   .potato-image-wrap { max-width: 145px; }
   .potato-hero, .hobby-hero { grid-template-columns: 1fr; }
+  .hobby-side-column { grid-column: auto; }
+  .hobbies-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .hobby-directory-card { min-height: 245px; padding: .65rem; }
+  .hobby-directory-card pre { font-size: clamp(.44rem, 2.1vw, .62rem); }
   .portrait-frame { position: relative; top: 0; width: min(430px, 100%); margin: auto; }
   .hobby-symbol { min-height: 220px; }
   .potato-copy h1, .hobby-hero h1 { margin-top: 2rem; font-size: clamp(2.8rem, 18vw, 5rem); }
@@ -1161,8 +1188,10 @@ button, input { font: inherit; }
     letter-spacing: -.055em;
     white-space: nowrap;
   }
-  .site-header nav { gap: .7rem; }
-  .site-header .header-bot-link { font-size: .55rem; letter-spacing: .045em; }
+  .site-header nav { gap: .4rem; }
+  .site-header .header-left-links { gap: .35rem; }
+  .site-header .header-section-link { font-size: .43rem; letter-spacing: 0; }
+  .site-header .header-bot-link { font-size: .48rem; letter-spacing: .02em; }
   .site-header .header-telegram-icon img {
     width: 27px;
     height: 27px;

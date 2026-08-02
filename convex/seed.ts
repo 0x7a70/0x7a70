@@ -131,3 +131,17 @@ export const restartThoughts = mutation({
     return { restarted: true, nextThoughtAt: Date.now() + delay };
   },
 });
+
+export const createWorkNow = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, { secret }) => {
+    assertSecret(secret);
+    const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
+    if (!state) throw new Error("Patch is not initialized.");
+    const delay = 1_000;
+    const nextWorkAt = Date.now() + delay;
+    await ctx.db.patch(state._id, { nextWorkAt });
+    await ctx.scheduler.runAfter(delay, internal.ai.generateWork);
+    return { scheduled: true, nextWorkAt };
+  },
+});

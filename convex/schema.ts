@@ -69,6 +69,7 @@ export default defineSchema({
     hobbyTitle: v.string(),
     title: v.string(),
     description: v.string(),
+    insight: v.optional(v.string()),
     shareSummary: v.string(),
     shareAction: v.string(),
     webAscii: v.string(),

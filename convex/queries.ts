@@ -88,3 +88,9 @@ export const hobbyWorks = query({
       .order("desc")
       .paginate(paginationOpts),
 });
+
+export const recentWorks = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: (ctx, { paginationOpts }) =>
+    ctx.db.query("works").withIndex("by_created_at").order("desc").paginate(paginationOpts),
+});

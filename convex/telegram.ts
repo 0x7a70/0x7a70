@@ -37,6 +37,7 @@ type PotatoContext = {
   corruption: number;
   hobbySlugs: string[];
   previousThoughts: string;
+  recentWorks: string;
 };
 
 const TELEGRAM_THOUGHT_MINUTES = 45;
@@ -117,6 +118,7 @@ async function generateReply(context: PotatoContext, message: string, conversati
     corruptionModifier: corruptionModifier(context.corruption),
     currentHobbies: context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
     previousThoughts: context.previousThoughts || "None available.",
+    recentWorks: context.recentWorks || "None available.",
     conversationHistory: conversationHistory || "No previous conversation is available.",
     userInput: "The latest Telegram message follows as the next user message.",
   });
@@ -151,7 +153,7 @@ async function generateReply(context: PotatoContext, message: string, conversati
 
 async function generateWelcome(context: PotatoContext, firstName: string, username?: string) {
   const system = `You are 0x7a70, a literal living potato in the potato patch.\n\nPersonality:\n${PERSONALITIES[context.name] || ""}\n\nCorruption: ${context.corruption}%\n${corruptionModifier(context.corruption)}\n\nCurrent hobbies: ${context.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", ")}\n\nA human has just entered your Telegram group. Their displayed first name is ${firstName}.${username ? ` Their Telegram username is @${username}.` : " They have no supplied Telegram username."}\n\nWelcome them directly in 15 to 35 words. You may riff lightly on their displayed name or username when its spelling, meaning, sound, or imagery naturally suggests a distinctive welcome. Do not force wordplay, mock the name, infer identity or personal traits from it, or make unsupported claims about the new member. Their clickable mention will be placed before your generated text, so do not repeat the exact full name or @username in the response. Make this welcome feel like a fresh, specific reaction from 0x7a70's current personality rather than a reusable greeting. Vary its structure, emotional register, and central image. Do not default to saying that the roots noticed them, the soil remembers them, a signal arrived, or the patch opened an eye. Choose one distinctive curiosity, observation, invitation, warning, or understated joke. Be cryptic only as a light accent, sincere, and understandable. Do not include a heading, quotation marks, markdown, or an @mention. Never use the em dash character (—); choose other punctuation.`;
-  const welcomePersonality = "Translate 0x7a70's curiosity into the welcome's behavior and cadence. It might inspect an interesting detail, ask a compact question, offer a practical invitation, express cautious delight, make a dry deduction, or admit that the newcomer changes an unresolved pattern. Choose one mode that fits the supplied name and corruption. Keep the shared patch atmosphere, but avoid a reusable mystical greeting template.";
+  const welcomePersonality = `Translate 0x7a70's curiosity into the welcome's behavior and cadence. It might inspect an interesting detail, ask a compact question, offer a practical invitation, express cautious delight, make a dry deduction, or admit that the newcomer changes an unresolved pattern. Choose one mode that fits the supplied name and corruption. Keep the shared patch atmosphere, but avoid a reusable mystical greeting template. Recent completed works, optional context: ${context.recentWorks || "None yet."} A work may inspire one small detail only when it creates a natural, welcoming connection; never list or advertise works.`;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const welcome = normalize(await openRouter([
@@ -469,6 +471,8 @@ export const prepareGroupThought = internalMutation({
     await ctx.scheduler.runAfter(delay, internal.telegram.generateGroupThought, { chatId });
     const context = await ctx.db.query("potatoes").withIndex("by_slug", (q) => q.eq("slug", "0x7a70")).unique();
     if (!context) return null;
+    const recentWorks = (await ctx.db.query("works").withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", "0x7a70")).order("desc").take(4))
+      .map((work) => `${work.title}: ${work.shareSummary}`).join("\n");
     if (Math.random() < TELEGRAM_WORK_CHANCE) {
       const works = await ctx.db.query("works").order("desc").collect();
       const posted = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "telegram").eq("status", "posted")).collect();
@@ -480,12 +484,12 @@ export const prepareGroupThought = internalMutation({
         const stale = pending.find((share) => String(share.workId) === String(work._id));
         if (stale) await ctx.db.delete(stale._id);
         await ctx.db.insert("workShares", { workId: work._id, platform: "telegram", status: "pending", reservedAt: now });
-        return { context, previousThoughts: "", asciiText: null, work };
+        return { context, previousThoughts: "", recentWorks, asciiText: null, work };
       }
     }
     if (Math.random() < TELEGRAM_ASCII_CHANCE) {
       const asciiArt = X_ASCII_ART[Math.floor(Math.random() * X_ASCII_ART.length)];
-      return { context, previousThoughts: "", asciiText: asciiArt?.text || null, work: null };
+      return { context, previousThoughts: "", recentWorks, asciiText: asciiArt?.text || null, work: null };
     }
     const events = await ctx.db
       .query("events")
@@ -495,6 +499,7 @@ export const prepareGroupThought = internalMutation({
     return {
       context,
       previousThoughts: events.filter((event) => event.type === "thought").slice(0, 6).map((event) => event.text).join("\n"),
+      recentWorks,
       asciiText: null,
       work: null,
     };
@@ -564,6 +569,7 @@ export const generateGroupThought = internalAction({
       corruptionModifier: corruptionModifier(prepared.context.corruption),
       currentHobbies: prepared.context.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
       previousThoughts: prepared.previousThoughts || "None yet.",
+      recentWorks: prepared.recentWorks || "None yet.",
     });
     let thought = "";
     const maxAttempts = 10;

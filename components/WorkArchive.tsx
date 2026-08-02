@@ -6,15 +6,16 @@ import { api } from "@/convex/_generated/api";
 import type { Work } from "@/lib/types";
 import { RelativeTime } from "./RelativeTime";
 
-export function WorkArchive({ scope, slug }: { scope: "potato" | "hobby"; slug: string }) {
+export function WorkArchive({ scope, slug = "" }: { scope: "potato" | "hobby" | "global"; slug?: string }) {
   const potatoWorks = usePaginatedQuery(api.queries.potatoWorks, { slug }, { initialNumItems: 8 });
   const hobbyWorks = usePaginatedQuery(api.queries.hobbyWorks, { slug }, { initialNumItems: 8 });
-  const source = scope === "potato" ? potatoWorks : hobbyWorks;
+  const globalWorks = usePaginatedQuery(api.queries.recentWorks, {}, { initialNumItems: 12 });
+  const source = scope === "potato" ? potatoWorks : scope === "hobby" ? hobbyWorks : globalWorks;
   const works = source.results as Array<Work & { _id: string }>;
 
   return (
     <section className="works-archive">
-      <div className="panel-title"><h2>permanent works</h2><span>{works.length}{source.status === "Exhausted" ? " recovered" : "+ recovered"}</span></div>
+      <div className="panel-title"><h2>{scope === "global" ? "all works" : <Link href="/works">{scope === "potato" ? "works" : "permanent works"}</Link>}</h2><span>{works.length}{source.status === "Exhausted" ? " recovered" : "+ recovered"}</span></div>
       {works.length ? (
         <div className="work-list">
           {works.map((work) => (
@@ -24,6 +25,7 @@ export function WorkArchive({ scope, slug }: { scope: "potato" | "hobby"; slug: 
                 <p>
                   {scope === "hobby" ? <><Link href={`/potatoes/${work.potatoSlug}`}>{work.potatoName}</Link><span>{" // "}</span></> : null}
                   {scope === "potato" ? <><Link href={`/hobbies/${work.hobbySlug}`}>{work.hobbyTitle}</Link><span>{" // "}</span></> : null}
+                  {scope === "global" ? <><Link href={`/potatoes/${work.potatoSlug}`}>{work.potatoName}</Link><span>{" // "}</span><Link href={`/hobbies/${work.hobbySlug}`}>{work.hobbyTitle}</Link><span>{" // "}</span></> : null}
                   {Math.round(work.corruptionAtCreation)}% corruption
                 </p>
               </div>

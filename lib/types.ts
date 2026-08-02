@@ -38,6 +38,7 @@ export type Work = {
   hobbyTitle: string;
   title: string;
   description: string;
+  insight?: string;
   shareSummary: string;
   shareAction: string;
   webAscii: string;

@@ -16,6 +16,7 @@
     "x:start": "node scripts/start-x.mjs",
     "x:now": "node scripts/start-x.mjs --now",
     "x:authorize": "node scripts/authorize-x.mjs",
+    "work:now": "node scripts/start-work.mjs",
     "deploy": "convex deploy --cmd \"npm run build\""
   },
   "dependencies": {

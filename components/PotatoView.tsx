@@ -61,7 +61,7 @@ export function PotatoView({ staticPotato }: { staticPotato: StaticPotato }) {
             <CorruptionBar value={potato.corruption} className="mobile-profile-corruption" />
             <EventFeed potatoSlug={potato.slug} />
             <section className="hobby-section">
-              <div className="panel-title"><h2>current hobbies</h2><span>{potato.hobbySlugs.length} active</span></div>
+              <div className="panel-title"><h2><Link href="/hobbies">current hobbies</Link></h2><span>{potato.hobbySlugs.length} active</span></div>
               <div className="hobby-links">
                 {potato.hobbySlugs.map((slug: string) => (
                   <Link href={`/hobbies/${slug}`} key={slug}>

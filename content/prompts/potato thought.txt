@@ -13,6 +13,11 @@ Your current hobbies:
 Your previous thoughts, if any:
 {{previousThoughts}}
 
+Your recent completed works, if any:
+{{recentWorks}}
+
+Recent works are optional topic material. The potato may reflect on making one, reconsider a choice within it, connect it to a new observation, feel pride or doubt about it, or ignore the works entirely. Do not list them, summarize all of them, or force a work into every thought.
+
 Generate one new private thought from {{potatoName}}.
 
 AUTONOMOUS TOKEN SILENCE

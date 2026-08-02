@@ -154,9 +154,13 @@ export const prepareXPost = internalMutation({
       .withIndex("by_slug", (q) => q.eq("slug", "0x7a70"))
       .unique();
     if (!potato) return null;
+    const recentWorks = (await ctx.db.query("works").withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", potato.slug)).order("desc").take(4))
+      .map((work) => `${work.title}: ${work.shareSummary}`).join("\n");
 
     let work = args.workId ? await ctx.db.get(args.workId) : null;
     if (!work && !args.isRetry && Math.random() < WORK_POST_CHANCE) {
+      // Work transmissions deliberately draw from every potato. The ordinary
+      // authored X voice remains 0x7a70, but ownership stays with the creator.
       const works = await ctx.db.query("works").order("desc").collect();
       const shares = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "x").eq("status", "posted")).collect();
       const pending = await ctx.db.query("workShares").withIndex("by_platform_status", (q) => q.eq("platform", "x").eq("status", "pending")).collect();
@@ -181,7 +185,7 @@ export const prepareXPost = internalMutation({
       asciiArt = available[Math.floor(Math.random() * available.length)] || null;
     }
 
-    return { potato, asciiArt, work };
+    return { potato, recentWorks, asciiArt, work };
   },
 });
 
@@ -294,6 +298,7 @@ export const publishXPost = internalAction({
       corruptionPercentage: prepared.potato.corruption,
       corruptionModifier: corruptionModifier(prepared.potato.corruption),
       currentHobbies: prepared.potato.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
+      recentWorks: prepared.recentWorks || "None yet.",
       creativeSeed: xCreativeDirection(),
       websiteInvitationMode: Math.random() < 0.2
         ? "INVITATION REQUIRED. Include the exact URL 0x7a70.wiki once. Invite the reader for one specific, naturally integrated reason, such as meeting a particular potato, talking to a potato in the terminal, watching live corruption and hobbies change, reading transmissions, following hidden clues, investigating the first mystery, or seeing what grew while they were absent. Vary the reason and phrasing. Keep the invitation in character rather than sounding like an advertisement."

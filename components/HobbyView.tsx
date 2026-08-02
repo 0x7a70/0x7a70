@@ -11,7 +11,7 @@ import { CorruptedDescription } from "./CorruptedDescription";
 import { SiteHeader } from "./SiteHeader";
 import { WorkArchive } from "./WorkArchive";
 
-const HOBBY_ASCII: Record<string, string> = {
+export const HOBBY_ASCII: Record<string, string> = {
   "amateur-archaeology": `       __
    ___/ /___
   / _  / __ \\
@@ -216,7 +216,7 @@ export function HobbyView({ hobby }: { hobby: { title: string; slug: string; des
       <SiteHeader />
       <div className="detail-shell">
         <nav className="breadcrumbs" aria-label="Breadcrumb">
-          <Link href="/patch">patch</Link><span>/</span><span>hobbies</span><span>/</span><span>{hobby.title}</span>
+          <Link href="/patch">patch</Link><span>/</span><Link href="/hobbies">hobbies</Link><span>/</span><span>{hobby.title}</span>
         </nav>
         <section className="hobby-hero">
           <div className="hobby-signal-column">
@@ -234,21 +234,23 @@ export function HobbyView({ hobby }: { hobby: { title: string; slug: string; des
               potatoSlug={`hobby-${hobby.slug}`}
             />
           </div>
+          <aside className="hobby-side-column">
+            <section className="hobby-members">
+              <div className="panel-title"><h2>{despair ? "potatoes without hobbies" : "potatoes practicing"}</h2><span>{potatoes.length} connected</span></div>
+              {potatoes.length ? (
+                <div className="member-grid">
+                  {potatoes.map((potato) => (
+                    <Link href={`/potatoes/${potato.slug}`} key={potato.slug}>
+                      <Image src={potatoImage(potato.corruption)} width={100} height={100} alt="" />
+                      <span><strong>{potato.name}</strong>{Math.round(potato.corruption)}% corrupted</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : <p className="muted">{despair ? "no potato is currently empty enough to appear here." : "no potato currently admits to this practice."}</p>}
+            </section>
+            {!despair && <WorkArchive scope="hobby" slug={hobby.slug} />}
+          </aside>
         </section>
-        <section className="hobby-members">
-          <div className="panel-title"><h2>{despair ? "potatoes without hobbies" : "potatoes practicing"}</h2><span>{potatoes.length} connected</span></div>
-          {potatoes.length ? (
-            <div className="member-grid">
-              {potatoes.map((potato) => (
-                <Link href={`/potatoes/${potato.slug}`} key={potato.slug}>
-                  <Image src={potatoImage(potato.corruption)} width={100} height={100} alt="" />
-                  <span><strong>{potato.name}</strong>{Math.round(potato.corruption)}% corrupted</span>
-                </Link>
-              ))}
-            </div>
-          ) : <p className="muted">{despair ? "no potato is currently empty enough to appear here." : "no potato currently admits to this practice."}</p>}
-        </section>
-        {!despair && <WorkArchive scope="hobby" slug={hobby.slug} />}
       </div>
     </main>
   );

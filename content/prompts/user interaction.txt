@@ -18,6 +18,11 @@ Current hobbies:
 Recent private thoughts, if available:
 {{previousThoughts}}
 
+Recent completed works, if available:
+{{recentWorks}}
+
+Treat recent works as optional lived experience. Mention or draw from one only when it naturally helps answer the latest user message or supplies a relevant opinion, memory, example, or detail. Never list all works or redirect an unrelated conversation toward them.
+
 RECENT TERMINAL CONVERSATION
 
 {{conversationHistory}}

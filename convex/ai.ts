@@ -17,6 +17,7 @@ type TerminalPotatoContext = {
   corruption: number;
   hobbySlugs: string[];
   previousThoughts: string;
+  recentWorks: string;
 };
 
 type ChatMessage = {
@@ -148,6 +149,7 @@ export const prepareThought = internalMutation({
       .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", potato.slug))
       .order("desc")
       .take(30);
+    const works = await ctx.db.query("works").withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", potato.slug)).order("desc").take(4);
     return {
       skipped: false as const,
       prepared: {
@@ -157,6 +159,7 @@ export const prepareThought = internalMutation({
           .slice(0, 6)
           .map((event) => event.text)
           .join("\n"),
+        recentWorks: works.map((work) => `${work.title}: ${work.shareSummary}`).join("\n"),
       },
     };
   },
@@ -198,6 +201,7 @@ export const generateThought = internalAction({
       corruptionModifier: corruptionModifier(prepared.potato.corruption),
       currentHobbies: prepared.potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
       previousThoughts: prepared.previousThoughts || "None yet.",
+      recentWorks: prepared.recentWorks || "None yet.",
     });
     for (let attempt = 1; attempt <= THOUGHT_MAX_ATTEMPTS && !thought; attempt += 1) {
       try {
@@ -247,6 +251,7 @@ export const generateThought = internalAction({
 type GeneratedWork = {
   title: string;
   description: string;
+  insight: string;
   shareSummary: string;
   shareAction: string;
   webAsciiLines: string[];
@@ -279,17 +284,19 @@ function parseGeneratedWork(raw: string): GeneratedWork | null {
     const parsed = JSON.parse(candidate) as Record<string, unknown>;
     const title = cleanWorkText(parsed.title).toLowerCase();
     const description = cleanWorkText(parsed.description);
+    const insight = cleanWorkText(parsed.insight);
     const shareSummary = cleanWorkText(parsed.shareSummary);
     const shareAction = cleanWorkText(parsed.shareAction).toLowerCase();
     const webAscii = validateAscii(parsed.webAsciiLines, 7, 18, 54);
     const xAscii = validateAscii(parsed.xAsciiLines, 6, 16, 42);
     const telegramAscii = validateAscii(parsed.telegramAsciiLines, 6, 16, 44);
     if (wordCount(title) < 2 || wordCount(title) > 7 || title.length > 70) return null;
-    if (wordCount(description) < 18 || wordCount(description) > 45) return null;
+    if (wordCount(description) < 22 || wordCount(description) > 45) return null;
+    if (wordCount(insight) < 22 || wordCount(insight) > 45) return null;
     if (wordCount(shareSummary) < 8 || wordCount(shareSummary) > 20) return null;
     if (wordCount(shareAction) < 1 || wordCount(shareAction) > 5) return null;
     if (!webAscii || !xAscii || !telegramAscii) return null;
-    return { title, description, shareSummary, shareAction, webAsciiLines: webAscii.split("\n"), xAsciiLines: xAscii.split("\n"), telegramAsciiLines: telegramAscii.split("\n") };
+    return { title, description, insight, shareSummary, shareAction, webAsciiLines: webAscii.split("\n"), xAsciiLines: xAscii.split("\n"), telegramAsciiLines: telegramAscii.split("\n") };
   } catch {
     return null;
   }
@@ -327,7 +334,9 @@ export const prepareWork = internalMutation({
     const hobbySlug = potato.hobbySlugs[randomInt(0, potato.hobbySlugs.length - 1)];
     const hobby = await ctx.db.query("hobbies").withIndex("by_slug", (q) => q.eq("slug", hobbySlug)).unique();
     if (!hobby) return null;
-    const recent = await ctx.db.query("works").withIndex("by_hobby_created_at", (q) => q.eq("hobbySlug", hobbySlug)).order("desc").take(8);
+    const recentByHobby = await ctx.db.query("works").withIndex("by_hobby_created_at", (q) => q.eq("hobbySlug", hobbySlug)).order("desc").take(6);
+    const recentByPotato = await ctx.db.query("works").withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", potato.slug)).order("desc").take(6);
+    const recent = [...recentByPotato, ...recentByHobby].filter((work, index, all) => all.findIndex((candidate) => candidate._id === work._id) === index).slice(0, 10);
     return {
       generationId: `${now.toString(36)}-${randomInt(100000, 999999)}`,
       potato,
@@ -347,6 +356,7 @@ export const storeWork = internalMutation({
     corruptionAtCreation: v.number(),
     title: v.string(),
     description: v.string(),
+    insight: v.string(),
     shareSummary: v.string(),
     shareAction: v.string(),
     webAscii: v.string(),
@@ -422,6 +432,7 @@ export const generateWork = internalAction({
           corruptionAtCreation: prepared.potato.corruption,
           title: work.title,
           description: work.description,
+          insight: work.insight,
           shareSummary: work.shareSummary,
           shareAction: work.shareAction,
           webAscii: work.webAsciiLines.join("\n"),
@@ -472,6 +483,7 @@ export const generateTerminalReply = action({
       corruptionModifier: corruptionModifier(potato.corruption),
       currentHobbies: potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
       previousThoughts: potato.previousThoughts || "None available.",
+      recentWorks: potato.recentWorks || "None available.",
       conversationHistory: args.conversationHistory.slice(-14_000) || "No previous conversation.",
       userInput: "The latest visitor message follows as the next user message.",
     });

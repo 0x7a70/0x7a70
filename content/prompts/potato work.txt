@@ -11,7 +11,7 @@ Name: {{hobbyTitle}}
 Kind of work: {{workKind}}
 Suitable action verbs: {{actionVerbs}}
 
-RECENT WORKS TO AVOID REPEATING
+RECENT WORKS BY THIS POTATO AND IN THIS HOBBY TO AVOID REPEATING
 {{recentWorks}}
 
 CREATIVE SEED
@@ -19,12 +19,25 @@ CREATIVE SEED
 
 Invent one concrete, distinctive work that could genuinely result from this hobby. Personality determines the choices, subject, technique, judgment, and emotional pressure. Corruption distorts those traits without replacing them. Do not make generic patch atmosphere the subject. Never discuss a token, coin, contract, CA, market, supply, staking, trading, or token burns.
 
+CORRUPTION AND CREATIVE INSTABILITY
+
+Corruption must materially affect the idea behind the work, its execution, and both website paragraphs. It is not merely visual damage applied after an otherwise ordinary concept.
+
+- 0–24%: coherent, grounded, skillful, practical, or gently eccentric. The work may be strange, but its intention and method make sense.
+- 25–49%: introduce a questionable premise, unusual association, unnecessary ritual, mild fixation, or technique that reveals the personality beginning to bend.
+- 50–74%: make the central idea noticeably obsessive, irrational, unsettling, overcomplicated, or based on a dubious private conclusion. Let the description treat one unreasonable choice with uncomfortable seriousness.
+- 75–89%: produce a distinctly wild, unstable, or unhinged concept. The potato may build for an impossible purpose, document a false certainty, repeat a compulsive structure, mistake coincidence for method, or make beauty from a deeply unsound premise.
+- 90–100%: push the idea toward extreme fixation, impossible logic, alarming conviction, reckless methodology, fractured symbolism, or a work whose purpose only makes sense inside the potato's corrupted personality. The description and insight should feel audaciously deranged, not merely vague, gloomy, or decorated with random glitches.
+
+At high corruption, be creatively specific rather than incoherent. Preserve a recognizable connection to the selected hobby, a describable finished work, valid JSON, readable prose, and legible ASCII. Do not make every corrupted work violent or apocalyptic. Unhinged can be comic, meticulous, tender, paranoid, grandiose, futile, ritualistic, socially inappropriate, or logically impossible depending on the potato's personality.
+
 Return exactly one JSON object with these keys:
-{"title":"...","description":"...","shareSummary":"...","shareAction":"...","webAsciiLines":["..."],"xAsciiLines":["..."],"telegramAsciiLines":["..."]}
+{"title":"...","description":"...","insight":"...","shareSummary":"...","shareAction":"...","webAsciiLines":["..."],"xAsciiLines":["..."],"telegramAsciiLines":["..."]}
 
 Requirements:
 - title: 2 to 7 words, lowercase, specific to this work;
-- description: 18 to 45 words, clear and atmospheric, describing this exact object, record, discovery, performance, observation, or result;
+- description: 22 to 45 words, the first website paragraph, clear and atmospheric, describing this exact object, record, discovery, performance, observation, or result;
+- insight: 22 to 45 words, the second website paragraph, adding interpretation and connecting specific choices in the work to the potato's individual personality, motive, tension, and corruption at the moment of creation; do not merely restate the description;
 - shareSummary: 8 to 20 words, a compact version of the description;
 - shareAction: a natural past-tense verb phrase suitable after the potato name, such as "painted", "unearthed", or "recorded"; use a verb appropriate to the hobby;
 - webAsciiLines: original recognizable ASCII art for this exact work, 7 to 18 lines, no line wider than 54 characters;

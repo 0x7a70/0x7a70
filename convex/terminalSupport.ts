@@ -32,6 +32,11 @@ export const getTerminalContext = internalQuery({
       .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", slug))
       .order("desc")
       .take(30);
+    const works = await ctx.db
+      .query("works")
+      .withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", slug))
+      .order("desc")
+      .take(4);
     return {
       ...potato,
       previousThoughts: events
@@ -39,6 +44,7 @@ export const getTerminalContext = internalQuery({
         .slice(0, 6)
         .map((event) => event.text)
         .join("\n"),
+      recentWorks: works.map((work) => `${work.title}: ${work.shareSummary}`).join("\n"),
     };
   },
 });
