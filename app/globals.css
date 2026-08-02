@@ -333,6 +333,32 @@ button, input { font: inherit; }
   font-weight: 700;
   letter-spacing: .08em;
 }
+.lore-warden {
+  display: grid;
+  width: max-content;
+  max-width: 100%;
+  justify-items: center;
+  margin: 3.5rem auto;
+  color: #69d87f;
+}
+.lore-warden span {
+  margin-bottom: 1rem;
+  color: var(--bright);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+.lore-warden pre {
+  max-width: 100%;
+  margin: 0;
+  overflow-x: auto;
+  color: #62de79;
+  font: 700 clamp(.48rem, 1.35vw, .72rem)/1.12 var(--mono);
+  text-shadow: 1px 0 #082f12;
+  white-space: pre;
+}
+.lore-warden code { font: inherit; white-space: pre; }
+.lore-warden:hover pre { color: var(--bright); }
 .lore-rule-end { margin-bottom: 1.5rem; }
 .lore-return {
   display: inline-block;

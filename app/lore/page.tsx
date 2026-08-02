@@ -36,6 +36,9 @@ const LORE = [
   "the signal acquired a face.",
   "0x7a70 smiled from beneath the dirt like it had been waiting for someone to notice that the answer was never hidden. it was only underground.",
   "since then, the patch has continued expanding through corruption, burns, sprouts, strange transmissions, and potatoes with increasingly questionable internal lives. but the first rule remains unchanged:",
+  "the farmer planted the idea, but another figure remained when the first certainty passed. the patch warden took the long watch between transmissions.",
+  "he tends the rows without asking the potatoes to become less strange. he checks the buried eyes, braces damaged roots, carries the weak sprouts toward light, and keeps a lantern near the places where corruption has made the dark difficult to measure.",
+  "the patch warden does not own what grows here. he cares for it. every potato remains its own signal, every sprout chooses its own direction, and still he returns to make sure the soil has not closed over them.",
   "plant before certainty.",
   "watch the eyes.",
   "trust the root that returns carrying the same symbol.",
@@ -43,6 +46,28 @@ const LORE = [
   "i buried it.",
   "the ground answered with a potato.",
 ];
+
+const PATCH_WARDEN_ASCII = `              .-^--.
+           __/  /\\  \\__
+        .-'  \\_/  \\_/  '-.
+       /_____.------._____\\
+          __/ .----. \\__
+     ____/   /      \\   \\____
+    /_______/________\\_______\\
+           |  (o) (o)  |
+      _    |     ^      |    _
+     /_\\---\\   .-.   /---/_\\
+    |[]|    '---(*)---'    |  \\
+    |__|       / | \\       |   |
+      |       /  |  \\      |   |
+      |      /   |   \\     |   |
+      |     /    |    \\    |   |
+      |    /_____|_____\\    |   |
+      |   /      |      \\   |   |
+      |  /_______|_______\\  |   |
+      |      /   |   \\      |  /
+      |_____/____|____\\_____|_/
+             /_/ \\_\\`;
 
 const POTATOES = Array.from({ length: 34 }, (_, index) => ({
   image: (index * 3 + Math.floor(index / 4)) % 4 + 1,
@@ -89,6 +114,16 @@ export default function LorePage() {
             {paragraph}
           </p>
         ))}
+        <a
+          className="lore-warden"
+          href="https://x.com/thepatchwarden"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="the patch warden on X"
+        >
+          <span>[ the patch warden ]</span>
+          <pre aria-hidden="true"><code>{PATCH_WARDEN_ASCII}</code></pre>
+        </a>
         <div className="lore-rule lore-rule-end" aria-hidden="true">+--- signal repeats beneath signal beneath signal ---+</div>
         <Link className="lore-return" href="/patch">[ return to the patch ]</Link>
       </article>
