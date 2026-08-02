@@ -18,6 +18,7 @@ const LORE = [
   "the clue had the shape of a seed. it was small, self-contained, and carrying more information than it was willing to reveal. i turned it over until the characters stopped looking like characters. the zero became an eye. the x became crossed roots. the numbers began arranging themselves like coordinates written by something with no hands.",
   "the farmer kept building.",
   "the signal kept repeating.",
+  "much later, the patch warden would learn those repetitions by feel. he could tell a healthy root pulse from a frightened one without asking the numbers to explain themselves.",
   "every new fragment pointed backward toward the first one, as though the patch had already grown and was sending roots into its own beginning. i searched through posts, symbols, names, and the strange little accidents that gather around a thing before anyone admits it is real.",
   "there was no proof.",
   "there was only pattern.",
@@ -33,12 +34,14 @@ const LORE = [
   "the code was a seed. the seed was a potato. the potato had already been planted. what looked like guessing became memory in reverse, as though the harvest had reached backward through the soil and instructed its own beginning.",
   "that was when the patch stopped being a metaphor.",
   "the roots connected.",
+  "the first roots did not arrange themselves into neat rows. the patch warden followed their crossings by lantern, loosening hard soil where a potato pressed upward and binding the places where young sprouts had split too soon.",
   "the signal acquired a face.",
   "0x7a70 smiled from beneath the dirt like it had been waiting for someone to notice that the answer was never hidden. it was only underground.",
   "since then, the patch has continued expanding through corruption, burns, sprouts, strange transmissions, and potatoes with increasingly questionable internal lives. but the first rule remains unchanged:",
   "the farmer planted the idea, but another figure remained when the first certainty passed. the patch warden took the long watch between transmissions.",
   "he tends the rows without asking the potatoes to become less strange. he checks the buried eyes, braces damaged roots, carries the weak sprouts toward light, and keeps a lantern near the places where corruption has made the dark difficult to measure.",
   "the patch warden does not own what grows here. he cares for it. every potato remains its own signal, every sprout chooses its own direction, and still he returns to make sure the soil has not closed over them.",
+  "he keeps no harvest ledger. his proof is smaller: a sprout surviving cold, a buried eye opening again, a distressed potato finding enough room to remain itself for one more night.",
   "plant before certainty.",
   "watch the eyes.",
   "trust the root that returns carrying the same symbol.",
@@ -103,6 +106,16 @@ export default function LorePage() {
 
       <article className="lore-transmission">
         <div className="lore-signal" aria-hidden="true">root://0x7a70/origin // signal integrity: [??????????]</div>
+        <a
+          className="lore-warden"
+          href="https://x.com/thepatchwarden"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="the patch warden on X"
+        >
+          <span>[ the patch warden ]</span>
+          <pre aria-hidden="true"><code>{PATCH_WARDEN_ASCII}</code></pre>
+        </a>
         <h1 data-text="lore">lore</h1>
         <div className="lore-rule" aria-hidden="true">+-----+---//---+-------+--[ buried transmission ]--+----+</div>
         {LORE.map((paragraph, index) => (
@@ -114,16 +127,6 @@ export default function LorePage() {
             {paragraph}
           </p>
         ))}
-        <a
-          className="lore-warden"
-          href="https://x.com/thepatchwarden"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="the patch warden on X"
-        >
-          <span>[ the patch warden ]</span>
-          <pre aria-hidden="true"><code>{PATCH_WARDEN_ASCII}</code></pre>
-        </a>
         <div className="lore-rule lore-rule-end" aria-hidden="true">+--- signal repeats beneath signal beneath signal ---+</div>
         <Link className="lore-return" href="/patch">[ return to the patch ]</Link>
       </article>

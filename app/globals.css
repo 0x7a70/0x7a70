@@ -334,11 +334,17 @@ button, input { font: inherit; }
   letter-spacing: .08em;
 }
 .lore-warden {
+  position: absolute;
+  top: clamp(7.5rem, 9vw, 9rem);
+  right: calc(100% + 1.2rem);
   display: grid;
-  width: max-content;
-  max-width: 100%;
+  width: 300px;
+  max-width: none;
   justify-items: center;
-  margin: 3.5rem auto;
+  margin: 0;
+  padding: 1rem .65rem;
+  border: 1px dashed rgba(92, 255, 124, .3);
+  background: rgba(0, 10, 2, .72);
   color: #69d87f;
 }
 .lore-warden span {
@@ -353,12 +359,22 @@ button, input { font: inherit; }
   margin: 0;
   overflow-x: auto;
   color: #62de79;
-  font: 700 clamp(.48rem, 1.35vw, .72rem)/1.12 var(--mono);
+  font: 700 .48rem/1.12 var(--mono);
   text-shadow: 1px 0 #082f12;
   white-space: pre;
 }
 .lore-warden code { font: inherit; white-space: pre; }
 .lore-warden:hover pre { color: var(--bright); }
+@media (max-width: 1320px) {
+  .lore-warden {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: min(300px, 100%);
+    max-width: 100%;
+    margin: 0 auto 2.5rem;
+  }
+}
 .lore-rule-end { margin-bottom: 1.5rem; }
 .lore-return {
   display: inline-block;
