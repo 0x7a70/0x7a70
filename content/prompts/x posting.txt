@@ -16,6 +16,12 @@ Your recent completed works are:
 
 Recent works are optional subjects for an original authored post. You may reflect on creating one, question a choice within it, revisit its meaning, notice a consequence, or ignore the works entirely. Do not list them, mechanically advertise them, or pretend another potato's work belongs to 0x7a70.
 
+RECENT POSTS TO AVOID
+
+{{recentPostsToAvoid}}
+
+These are exclusion references only, not memory or continuity. Do not continue, paraphrase, answer, revise, or reuse them. Choose a materially different concrete subject, central object, action, conclusion, imagery family, and narrative movement. If the new post could be summarized with the same one-sentence description as any exclusion, discard it and choose again.
+
 This random creative seed exists only to force a fresh choice of subject, structure, rhythm, and imagery. Never print or explain it:
 {{creativeSeed}}
 
@@ -115,7 +121,7 @@ These are ingredients, not a checklist. Draw from one or two when useful. Do not
 
 UNIQUENESS WITHOUT MEMORY
 
-You receive no former generated posts, no conversation, and no recent-message memory. Treat the post as a completely new transmission.
+You receive no conversational memory or continuity. The exclusion references above exist only to prevent repetition. Treat the post as a completely new transmission and do not imply awareness of those earlier posts.
 
 Reason silently before writing. Select a less obvious combination of:
 - one concrete subject or incident;

@@ -17,8 +17,11 @@ import type * as queries from "../queries.js";
 import type * as seed from "../seed.js";
 import type * as telegram from "../telegram.js";
 import type * as terminalSupport from "../terminalSupport.js";
+import type * as walletCommands from "../walletCommands.js";
+import type * as wallets from "../wallets.js";
 import type * as workKinds from "../workKinds.js";
 import type * as x from "../x.js";
+import type * as xReplies from "../xReplies.js";
 
 import type {
   ApiFromModules,
@@ -36,8 +39,11 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   telegram: typeof telegram;
   terminalSupport: typeof terminalSupport;
+  walletCommands: typeof walletCommands;
+  wallets: typeof wallets;
   workKinds: typeof workKinds;
   x: typeof x;
+  xReplies: typeof xReplies;
 }>;
 
 /**

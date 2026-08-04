@@ -90,3 +90,87 @@ production build. Preview deployments should use a Convex preview deploy key;
 production uses the existing production deployment. Promote only after the
 patch, one potato page, one hobby page, and one terminal request pass smoke
 testing.
+
+## X replies and X-linked wallets
+
+The reply and wallet infrastructure is deliberately inert. `X_REPLIES_ENABLED`
+and `X_CRYPTO_EXECUTION_ENABLED` default to `false`, and no cron invokes
+`xReplies:pollMentions`. Do not add that cron or enable either flag until X has
+granted written approval and the signing service has completed security review.
+
+An X post containing `do not reply` (including `(do not reply)`, matched without
+regard to case or repeated spaces) is discarded before any reply, AI request,
+wallet provisioning, or wallet action. Reply processing uses only the direct
+post's text and never supplies its parent or wider thread as context.
+
+Direct questions about how wallet, transaction, burn, fee-claim, dev-buy, and
+PotatoPad launch mechanics work are routed to a factual information response
+before command parsing. The response is grounded in a fixed capability sheet,
+uses only the direct post, and cannot authorize a wallet action.
+
+Wallet private keys must never enter Convex, Vercel, application logs, or local
+environment files. Coinbase CDP holds the key material. Its API key ID, API key
+secret, and wallet secret live only in Vercel's encrypted server environment;
+they are never `NEXT_PUBLIC` variables and are not copied to Convex. Convex
+stores only the CDP wallet's public address as its opaque reference.
+
+The built-in authenticated gateway is mounted at `/api/wallet-signer`. In
+production set Convex `WALLET_SIGNER_URL` to
+`https://0x7a70.wiki/api/wallet-signer` and give Vercel and Convex the same
+random `WALLET_SIGNER_TOKEN`. Vercel additionally requires:
+
+- `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, and `CDP_WALLET_SECRET`;
+- `WALLET_SIGNER_IDEMPOTENCY_SECRET`, a separate random 32-byte-or-longer value;
+- `WALLET_MAX_TRANSACTION_USD`, an explicit fail-closed per-transaction ceiling;
+- optionally `ROBINHOOD_RPC_URL`; otherwise the official mainnet RPC is used.
+
+The gateway provides these authenticated operations:
+
+- `POST /v1/wallets`: idempotently provision one chain-4663 wallet for an X user.
+- `POST /v1/wallets/balance`: return a display balance after resolving an exact
+  contract; reject ambiguous tickers.
+- `POST /v1/transactions/execute`: simulate, enforce policy, sign, broadcast,
+  wait for a receipt, and return the transaction hash, status, block, resolved
+  wei value, and launch event results where relevant.
+
+Successful X wallet responses include the confirmed transaction's public
+Robinhood Chain Blockscout URL (`https://robinhoodchain.blockscout.com/tx/<hash>`).
+Idempotent replays of an already-confirmed request return the same URL.
+
+The signer must independently enforce the expected source address, chain ID
+4663, per-user ownership, daily/value limits, idempotency key, contract
+allowlist, exact approvals, and operation allowlist. It must reject arbitrary
+calldata. USD conversions happen there using a trusted, expiring quote; the AI
+never performs financial arithmetic.
+
+Every executed operation also carries a mandatory native-balance policy. After
+the requested value and the transaction's maximum estimated gas are deducted,
+the wallet must retain at least the fresh ETH equivalent of
+`WALLET_MIN_GAS_RESERVE_USD` (default `$0.50`). The signer, not Convex, obtains
+the quote and performs integer wei arithmetic. If the quote, balance, or gas
+estimate is unavailable, execution fails closed. This applies to launches,
+native/token sends, burns, and fee claims so even a token-only action cannot
+consume the ETH intended for the next interaction's gas.
+
+Supported operation types are `eth_transfer`, `erc20_transfer`,
+`erc20_burn_to_dead`, `potatopad_launch`, and
+`potatopad_creator_fee_claim`. The verified curve pad is
+`0xbE2aCD9044516399aa4C697c299571664fBe9d4B`. Launches call its initial,
+payable `createToken(name,symbol,meta,salt)` entry point and attach the dev-buy
+value atomically. They do not call `bond()`; bonding is a later curve milestone.
+
+Fee claims remain deliberately disabled in the gateway. Before enabling them,
+resolve the token's actual launch pad and position from `TokenCreated`/pad
+state, read that pad's `locker()`, verify its deployed ABI, then implement its
+exact collection and creator-claim calls. Never assume one global locker.
+
+Keep `X_CRYPTO_EXECUTION_ENABLED=false` through provisioning and read-only
+balance tests. Turning it on authorizes real irreversible mainnet transactions;
+it is not a health-check switch.
+
+For an X launch, `imageURI` is the HTTPS `pbs.twimg.com` URL returned for the
+attached photo. PotatoPad's formatter explicitly renders plain HTTPS image
+URLs. Only media URLs supplied by X's attachment expansion are accepted; a
+URL typed into post text is not trusted as token artwork. This avoids another
+upload service, but unlike IPFS the image is not content-addressed and could
+become unavailable if X removes or changes the media.

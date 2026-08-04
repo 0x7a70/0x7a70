@@ -10,7 +10,7 @@ const X_POST_MAX_MINUTES = 255;
 const X_POST_URL = "https://api.x.com/2/tweets";
 const ASCII_POST_CHANCE = 0.2;
 const WORK_POST_CHANCE = 0.2;
-const X_PUBLISH_ATTEMPTS = 3;
+const X_PUBLISH_ATTEMPTS = 2;
 const X_RETRY_MINUTES = 5;
 const X_SCHEDULED_RETRIES = 3;
 
@@ -52,6 +52,30 @@ function containsOutboundReference(value: string) {
   const urlOrDomain = /(?:https?:\/\/|www\.|\b(?:[a-z0-9-]+\.)+(?:com|wiki|org|net|io|co|app|dev|xyz|gg)\b)/i;
   const mention = /(^|[^\w])@[a-z0-9_]{1,15}\b/i;
   return urlOrDomain.test(value) || mention.test(value);
+}
+
+function xComparisonTokens(value: string) {
+  return new Set(value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((word) => word.length > 3));
+}
+
+function xTextSimilarity(left: string, right: string) {
+  const normalizedLeft = left.toLowerCase().replace(/\s+/g, " ").trim();
+  const normalizedRight = right.toLowerCase().replace(/\s+/g, " ").trim();
+  if (normalizedLeft === normalizedRight) return 1;
+  const leftTokens = xComparisonTokens(left);
+  const rightTokens = xComparisonTokens(right);
+  if (!leftTokens.size || !rightTokens.size) return 0;
+  const intersection = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  return intersection / (leftTokens.size + rightTokens.size - intersection);
+}
+
+function isTooSimilarToRecent(candidate: string, recent: string[]) {
+  return recent.some((previous) => xTextSimilarity(candidate, previous) >= .48);
+}
+
+function isSafeXPublishRetry(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /^X 429\b/.test(message);
 }
 
 function oauthEncode(value: string) {
@@ -132,7 +156,7 @@ async function publishOriginalXPostWithRetries(text: string) {
       lastError = error;
       const message = error instanceof Error ? error.message : "unknown";
       console.error("x_publish_attempt_failed", { attempt, message });
-      if (/\b(400|401|403)\b/.test(message) || attempt === X_PUBLISH_ATTEMPTS) break;
+      if (!isSafeXPublishRetry(error) || attempt === X_PUBLISH_ATTEMPTS) break;
       await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
     }
   }
@@ -165,6 +189,7 @@ export const prepareXPost = internalMutation({
     if (!potato) return null;
     const recentWorks = (await ctx.db.query("works").withIndex("by_potato_created_at", (q) => q.eq("potatoSlug", potato.slug)).order("desc").take(4))
       .map((work) => `${work.title}: ${work.shareSummary}`).join("\n");
+    const recentPosts = (await ctx.db.query("xPosts").withIndex("by_created_at").order("desc").take(10)).map((post) => post.text);
 
     let work = args.workId ? await ctx.db.get(args.workId) : null;
     if (!work && !args.isRetry && Math.random() < WORK_POST_CHANCE) {
@@ -194,7 +219,7 @@ export const prepareXPost = internalMutation({
       asciiArt = available[Math.floor(Math.random() * available.length)] || null;
     }
 
-    return { potato, recentWorks, asciiArt, work };
+    return { potato, recentWorks, recentPosts, asciiArt, work };
   },
 });
 
@@ -212,6 +237,8 @@ export const scheduleXRetry = internalMutation({
 export const recordXPost = internalMutation({
   args: { postId: v.string(), text: v.string(), asciiArtId: v.optional(v.string()), workId: v.optional(v.id("works")) },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.query("xPosts").withIndex("by_post_id", (q) => q.eq("postId", args.postId)).unique();
+    if (existing) return;
     await ctx.db.insert("xPosts", { ...args, createdAt: Date.now() });
     if (args.asciiArtId) {
       const existing = await ctx.db
@@ -246,6 +273,14 @@ export const releaseXWork = internalMutation({
   },
 });
 
+export const retireUncertainXWork = internalMutation({
+  args: { workId: v.id("works") },
+  handler: async (ctx, { workId }) => {
+    const share = await ctx.db.query("workShares").withIndex("by_work_platform", (q) => q.eq("workId", workId).eq("platform", "x")).unique();
+    if (share?.status === "pending") await ctx.db.patch(share._id, { status: "posted", postedAt: Date.now() });
+  },
+});
+
 export const publishXPost = internalAction({
   args: { retryAttempt: v.optional(v.number()), asciiArtId: v.optional(v.string()), workId: v.optional(v.id("works")) },
   handler: async (ctx, args) => {
@@ -269,8 +304,12 @@ export const publishXPost = internalAction({
         await ctx.runMutation(internal.x.recordXPost, { postId: posted.id, text: posted.text, workId: prepared.work._id });
       } catch (error) {
         console.error("x_work_publish_failed", { workId: prepared.work._id, message: error instanceof Error ? error.message : "unknown" });
-        if (retryAttempt < X_SCHEDULED_RETRIES) {
+        if (isSafeXPublishRetry(error) && retryAttempt < X_SCHEDULED_RETRIES) {
           await ctx.runMutation(internal.x.scheduleXRetry, { retryAttempt: retryAttempt + 1, workId: prepared.work._id });
+        } else if (!isSafeXPublishRetry(error)) {
+          // A connection failure can occur after X accepted the post. Retire
+          // the work rather than risk publishing the same artifact again.
+          await ctx.runMutation(internal.x.retireUncertainXWork, { workId: prepared.work._id });
         } else {
           await ctx.runMutation(internal.x.releaseXWork, { workId: prepared.work._id });
         }
@@ -291,7 +330,7 @@ export const publishXPost = internalAction({
           asciiArtId: prepared.asciiArt.id,
           message: error instanceof Error ? error.message : "unknown",
         });
-        if (retryAttempt < X_SCHEDULED_RETRIES) {
+        if (isSafeXPublishRetry(error) && retryAttempt < X_SCHEDULED_RETRIES) {
           await ctx.runMutation(internal.x.scheduleXRetry, {
             retryAttempt: retryAttempt + 1,
             asciiArtId: prepared.asciiArt.id,
@@ -306,8 +345,9 @@ export const publishXPost = internalAction({
       internalPersonalityDescription: PERSONALITIES[prepared.potato.name] || "",
       corruptionPercentage: prepared.potato.corruption,
       corruptionModifier: corruptionModifier(prepared.potato.corruption),
-      currentHobbies: prepared.potato.hobbySlugs.map((slug) => slug.replaceAll("-", " ")).join(", "),
+      currentHobbies: prepared.potato.hobbySlugs.map((slug: string) => slug.replaceAll("-", " ")).join(", "),
       recentWorks: prepared.recentWorks || "None yet.",
+      recentPostsToAvoid: prepared.recentPosts.length ? prepared.recentPosts.join("\n\n--- previous post ---\n\n") : "None yet.",
       creativeSeed: xCreativeDirection(),
     });
 
@@ -326,7 +366,7 @@ export const publishXPost = internalAction({
         }));
         const words = candidate.split(/\s+/).filter(Boolean).length;
         const sections = candidate.split("\n\n").filter(Boolean).length;
-        if (words >= 30 && words <= 65 && sections >= 2 && sections <= 4 && candidate.length >= 180 && candidate.length <= 275 && !containsOutboundReference(candidate)) {
+        if (words >= 30 && words <= 65 && sections >= 2 && sections <= 4 && candidate.length >= 180 && candidate.length <= 275 && !containsOutboundReference(candidate) && !isTooSimilarToRecent(candidate, prepared.recentPosts)) {
           text = candidate;
         } else {
           console.warn("x_generation_output_invalid", { attempt, words, sections, characters: candidate.length });
@@ -353,7 +393,7 @@ export const publishXPost = internalAction({
       console.error("x_publish_failed", {
         message: error instanceof Error ? error.message : "unknown",
       });
-      if (retryAttempt < X_SCHEDULED_RETRIES) {
+      if (isSafeXPublishRetry(error) && retryAttempt < X_SCHEDULED_RETRIES) {
         await ctx.runMutation(internal.x.scheduleXRetry, { retryAttempt: retryAttempt + 1 });
       }
     }
