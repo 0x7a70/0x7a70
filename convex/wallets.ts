@@ -95,8 +95,8 @@ async function signerRequest<T>(path: string, body: unknown): Promise<T> {
 
 async function provisionSignerWallet(xUserId: string): Promise<SignerWallet> {
   const wallet = await signerRequest<SignerWallet>("/v1/wallets", {
-    idempotencyKey: `x:${xUserId}:robinhood`,
-    ownerReference: `x:${xUserId}`,
+    idempotencyKey: `x-${xUserId}:robinhood`,
+    ownerReference: `x-${xUserId}`,
     chainId: ROBINHOOD_CHAIN_ID,
   });
   if (!wallet.walletRef || !safeAddress(wallet.address)) throw new Error("signer returned an invalid wallet");
