@@ -519,9 +519,15 @@ export const executeCommand = internalAction({
       return { ok: false, message: safeFailure(error) };
     }
     if (!wallet || wallet.status !== "active") return { ok: false, message: "the wallet root is unavailable" };
-    if (command.kind === "create_wallet" || command.kind === "show_wallet") {
-      return { ok: true, message: `robinhood chain wallet: ${wallet.address}` };
-    }
+   if (command.kind === "create_wallet" || command.kind === "show_wallet") {
+  const explorerUrl =
+    `https://robinhoodchain.blockscout.com/address/${wallet.address}`;
+
+  return {
+    ok: true,
+    message: `robinhood chain wallet: ${explorerUrl}`,
+  };
+}
     if (command.kind === "show_balance") {
       try {
         const balance = await signerRequest<{ display: string }>("/v1/wallets/balance", {
