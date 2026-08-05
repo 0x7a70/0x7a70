@@ -92,7 +92,10 @@ export const broadcastRequestSchema = transactionStatusRequestSchema.extend({
 export type BroadcastRequest = z.infer<typeof broadcastRequestSchema>;
 
 export function accountName(ownerReference: string) {
-  return `x7a70-x-${createHash("sha256").update(ownerReference).digest("hex").slice(0, 32)}`;
+  return `x7a70-x-${createHash("sha256")
+    .update(ownerReference)
+    .digest("hex")
+    .slice(0, 24)}`;
 }
 
 export function resolveTokenAddress(token: string) {
