@@ -148,8 +148,8 @@ export function parseWalletCommand(raw: string): WalletCommand {
     if (percentage) return { kind: "send", amount: percentage.amount, unit: "percent", token: percentage.token, recipient };
     const usd = text.match(new RegExp(`\\$${NUMBER}|${NUMBER}\\s*(?:usd|dollars?)\\b`, "i"));
     const eth = text.match(new RegExp(`${NUMBER}\\s*(?:eth|weth)\\b`, "i"));
-    const token = text.match(new RegExp(`${NUMBER}\\s+\\$?([a-zA-Z][a-zA-Z0-9]{0,11})\\b`, "i"));
-    if (usd) return { kind: "send", amount: usd[1] || usd[2], unit: "usd", recipient };
+  const token = text.match(new RegExp(`${NUMBER}\\s+\\$?(0x[a-fA-F0-9]{40}|0x7a70|[a-zA-Z][a-zA-Z0-9]{0,11})\\b`, "i"));
+   if (usd) return { kind: "send", amount: usd[1] || usd[2], unit: "usd", recipient };
     if (eth) return { kind: "send", amount: eth[1], unit: "eth", recipient };
     if (token) return { kind: "send", amount: token[1], unit: "token", token: cleanSymbol(token[2]), recipient };
   }

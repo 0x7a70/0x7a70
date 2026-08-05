@@ -455,7 +455,8 @@ if (/disabled|not configured|unavailable/i.test(message)) {
   return message;
 }  
  if (/revert|simulation/i.test(message)) return "the transaction was rejected during its safety check";
-  return "the root line failed before confirmation";
+  console.error("wallet_unclassified_failure", { message });
+return message;
 }
 
 async function submit(wallet: { signerWalletRef: string; address: string }, xUserId: string, requestId: string, operation: Record<string, unknown>) {
