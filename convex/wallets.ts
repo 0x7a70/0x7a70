@@ -437,8 +437,11 @@ function isPremium(subscriptionType?: string) {
 
 function safeFailure(error: unknown) {
   const message = error instanceof Error ? error.message : "wallet request failed";
-  if (/reserve|ending balance/i.test(message)) return "that would leave too little eth for the next root fee";
-  if (/insufficient/i.test(message)) return "insufficient funds for the amount and gas";
+  if (/reserve|ending balance/i.test(message)) {
+  console.error("wallet_reserve_failure", { message });
+  return message;
+}
+if (/insufficient/i.test(message)) return "insufficient funds for the amount and gas";
   if (/image/i.test(message)) return "the token image could not be prepared";
   if (/specify the token|ticker matches|launch was not found|no completed PotatoPad launch/i.test(message)) return message;
   if (/launch creator|fee beneficiary/i.test(message)) return "that wallet is not authorized to claim fees for this launch";
@@ -447,8 +450,11 @@ function safeFailure(error: unknown) {
   if (/pool|liquidity|quote returned no output/i.test(message)) return "no usable trading route or liquidity was found for that token";
   if (/slippage/i.test(message)) return "the trade moved beyond the requested slippage before it could be confirmed";
   if (/0\.02627 ETH maximum|initial dev buy exceeds/i.test(message)) return "the maximum initial dev buy is 0.02627 eth";
-  if (/disabled|not configured|unavailable/i.test(message)) return "that root is not available yet";
-  if (/revert|simulation/i.test(message)) return "the transaction was rejected during its safety check";
+if (/disabled|not configured|unavailable/i.test(message)) {
+  console.error("wallet_configuration_failure", { message });
+  return message;
+}  
+ if (/revert|simulation/i.test(message)) return "the transaction was rejected during its safety check";
   return "the root line failed before confirmation";
 }
 

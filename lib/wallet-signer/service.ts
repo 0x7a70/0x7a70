@@ -426,14 +426,27 @@ export async function executeTransaction(request: ExecutionRequest) {
   const estimatedGas = await publicClient.estimateGas({ account: account.address, ...call });
   const gas = estimatedGas * 125n / 100n;
   const fees = await publicClient.estimateFeesPerGas();
-  const { maxFeePerGas, maxPriorityFeePerGas } = fees;
-  if (!maxFeePerGas || !maxPriorityFeePerGas) throw new Error("fee estimate unavailable");
-  const balance = await publicClient.getBalance({ address: account.address });
+const { maxFeePerGas, maxPriorityFeePerGas } = fees;
+
+if (maxFeePerGas === undefined || maxFeePerGas <= 0n) {
+  throw new Error("fee estimate unavailable");
+}
+
+const priorityFee = maxPriorityFeePerGas ?? 0n;  
+const balance = await publicClient.getBalance({ address: account.address });
   const reserve = usdToWei(request.balancePolicy.minimumEndingBalanceUsd, price);
   if (balance < call.value + gas * maxFeePerGas + reserve) throw new Error("ending balance would violate the reserve policy");
   const nonce = await publicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
-  const unsigned = serializeTransaction({ chainId: ROBINHOOD_CHAIN_ID, type: "eip1559", nonce, gas, maxFeePerGas, maxPriorityFeePerGas, ...call });
-  const signed = await cdpClient().evm.signTransaction({ address: account.address, transaction: unsigned, idempotencyKey: request.idempotencyKey });
+ const unsigned = serializeTransaction({
+  chainId: ROBINHOOD_CHAIN_ID,
+  type: "eip1559",
+  nonce,
+  gas,
+  maxFeePerGas,
+  maxPriorityFeePerGas: priorityFee,
+  ...call,
+});
+ const signed = await cdpClient().evm.signTransaction({ address: account.address, transaction: unsigned, idempotencyKey: request.idempotencyKey });
   return {
     transactionHash: keccak256(signed.signature), status: "prepared" as const,
     signedTransaction: signed.signature, valueWei: call.value.toString(),
