@@ -76,11 +76,16 @@ async function xGet<T>(path: string, query: URLSearchParams): Promise<T> {
 }
 
 async function publishReply(text: string, sourcePostId: string) {
+  // X counts every HTTP(S) URL as a fixed-length t.co link. Validate the
+  // weighted length instead of slicing raw text, which could cut an explorer
+  // URL in half.
+  const weightedLength = text.replace(/https?:\/\/\S+/g, "x".repeat(23)).length;
+  if (weightedLength > 280) throw new Error("X reply exceeded 280 characters");
   const url = `${X_API}/tweets`;
   const response = await fetch(url, {
     method: "POST",
     headers: { authorization: await xAuthorization("POST", url), "content-type": "application/json" },
-    body: JSON.stringify({ text: text.slice(0, 275), reply: { in_reply_to_tweet_id: sourcePostId } }),
+    body: JSON.stringify({ text, reply: { in_reply_to_tweet_id: sourcePostId } }),
   });
   const payload = await response.json().catch(() => ({})) as { data?: { id?: string }; detail?: string };
   if (!response.ok || !payload.data?.id) throw new Error(payload.detail || `X reply failed (${response.status})`);
@@ -98,27 +103,33 @@ You are 0x7a70 answering one direct X post. Give a practical, factual answer in
 one to three short sentences. Answer the question immediately, then add at most
 one light potato-flavored phrase. Never use an em dash. Never invent features,
 investment claims, token utility, returns, guarantees, or security guarantees.
-Only mention facts relevant to the direct question.
+Only mention facts relevant to the direct question. Write from the user's
+perspective: what they can ask 0x7a70 to do, what they need to provide, and what
+they will receive. Use ordinary language. Do not volunteer backend architecture,
+contract methods, salts, lockers, signers, providers, simulations, routing
+internals, receipt verification, or numeric account identifiers. Always call the
+launch platform "PotatoPad" and nothing else.
 
 CURRENT FACTS
 - ${availability}
-- One unique Robinhood Chain EVM wallet is provisioned on a user's first direct interaction and linked to the user's immutable X user ID. Conversation, information questions, balance checks, and wallet commands all trigger provisioning. Username changes do not create a new wallet.
-- Sending to an X handle resolves the recipient's immutable X ID and creates that recipient's unique canonical wallet if needed. It is the same wallet they would receive by interacting first, and their later interactions retrieve it with the received assets and all supported functions.
+- A user can ask 0x7a70 for their wallet. Their first interaction creates it if needed, and later requests return the same wallet even if their X username changes.
+- A user can send to an X handle. If the recipient does not yet have a wallet, one is created for them, and it is the same wallet they can use when they later interact with 0x7a70.
 - The application controls transaction signing on the user's behalf. Never claim that nobody else can access or operate the wallet cryptographically.
 - The wallet address can receive Robinhood Chain ETH and compatible ERC-20 tokens. ETH pays network gas.
-- ETH and ERC-20 transfers can be sent to an exact EVM address or an X handle. An X handle is resolved to that account's immutable X ID and its unique 0x7a70 wallet.
-- Burns can use a direct token quantity or a USD amount such as "$25 of TOKEN". USD burns use a live verified Uniswap V3 quote at execution time to estimate the token quantity sent to the dead address; this is an estimate, not a guaranteed sale value.
-- Token sends, sells, and burns can say "all of my TOKEN", "half of my TOKEN", or "XX% of my TOKEN". The signer applies the fraction to the live token balance at execution time. Percentages above 100% or equal to zero are rejected.
-- $0x7a70 always means 0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f. Other held ERC-20 tokens may be identified by ticker when exactly one held contract matches; ambiguous or missing tickers require the exact contract address.
-- Supported commands are show wallet, show balance, buy, sell, send, burn to the dead address, claim eligible PotatoPad creator fees, and launch through the PotatoCurvePad bonding curve.
-- Normal buys accept an ETH or USD input amount. Sells accept a token amount. Trades use the verified PotatoPad Uniswap V3 route with 2.5% default maximum slippage, or an explicitly requested value from 0.1% through 20%. A first sell may submit an exact router approval and require the sell command to be sent again after confirmation.
+- ETH and token transfers can be sent to a wallet address or an X handle.
+- Burns can use a token quantity or a USD amount such as "$25 of TOKEN". A USD amount is an execution-time estimate, not a guaranteed market value.
+- Sends, sells, and burns can say "all of my TOKEN", "half of my TOKEN", or "XX% of my TOKEN". Percentages must be greater than zero and no more than 100%.
+- $0x7a70 resolves internally to its fixed token contract. Other held ERC-20 tokens may be identified by ticker when exactly one held contract matches; ambiguous or missing tickers require the exact contract address as input.
+- Users can ask to see their wallet or balance, buy, sell, send, burn, claim eligible PotatoPad creator fees, or launch through PotatoPad.
+- Buys accept an ETH or USD amount. Sells accept a token amount. Trades default to 2.5% maximum slippage, or the user can request 0.1% through 20%. A first sell may require an approval transaction; if so, tell the user to repeat the sell after that approval confirms.
 - A launch requires a verified X account, a token name, ticker, and an attached X image. A dev buy is optional, may be stated in USD or ETH, and cannot exceed 0.02627 ETH after any USD conversion.
-- Optional launch information includes an HTTPS website, X link, Telegram link, and description. The current PotatoPad contract stores image, website, X, and Telegram. Description is retained by this application but is not written into the current createToken contract metadata.
-- Every transaction is simulated and subject to signer policy before signing. Successful responses include the Robinhood Chain Blockscout transaction link.
-- The system attempts to leave at least $0.50 worth of ETH after a transaction for a later network fee. This is a configurable reserve, not a guarantee that it covers every future fee.
+- Optional launch information includes an HTTPS website, X link, Telegram link, and description.
+- Successful transaction responses include a Robinhood Chain Blockscout link.
+- There is no fixed ETH reserve. If a user transfers all ETH, the transaction subtracts its estimated network fee and sends the remainder. If a wallet cannot cover the requested amount and gas, tell the user to add ETH for gas.
 - Non-premium accounts have ten value-moving wallet requests per UTC day. Premium and Premium+ accounts have fifty. Warnings appear when two and one requests remain. Additional monetary safety limits may apply.
-- Launches, trades, sends, burns, and fee claims can fail because of insufficient funds, liquidity, slippage, gas, policy checks, contract simulation, provider availability, or an invalid request.
+- Launches, trades, sends, burns, and fee claims can fail because of insufficient funds, liquidity, slippage, gas, service availability, or an invalid request. Explain the specific user-facing reason concisely.
 - Do not disclose secrets, internal credentials, private implementation details, or unsupported instructions.
+- Never print a raw wallet address, token contract address, or transaction hash. Provide the corresponding Robinhood Chain Blockscout URL, labeled exactly as "Your wallet:", "Your token:", or "Your TXN:" when one is needed.
 ${featureInformation}
 `;
   try {
@@ -389,8 +400,24 @@ export const retryInteraction = internalAction({
 });
 
 type XUser = { id: string; username: string; verified?: boolean; verified_type?: string; subscription_type?: string };
-type Mention = { id: string; text: string; author_id: string; attachments?: { media_keys?: string[] } };
+type XUrlEntity = { url: string; expanded_url?: string; unwound_url?: string };
+type Mention = {
+  id: string;
+  text: string;
+  author_id: string;
+  attachments?: { media_keys?: string[] };
+  entities?: { urls?: XUrlEntity[] };
+};
 type Media = { media_key: string; type: string; url?: string };
+
+function expandXUrls(mention: Mention) {
+  let text = mention.text;
+  for (const entity of mention.entities?.urls || []) {
+    const expanded = entity.unwound_url || entity.expanded_url;
+    if (expanded?.startsWith("https://")) text = text.replaceAll(entity.url, expanded);
+  }
+  return text;
+}
 
 export const pollMentions = internalAction({
   args: {},
@@ -413,7 +440,7 @@ export const pollMentions = internalAction({
           expansions: "author_id,attachments.media_keys",
           // Deliberately request only the direct post. Never retrieve or assemble
           // the parent post, quoted post, or wider conversation as bot input.
-          "tweet.fields": "author_id,attachments,created_at",
+          "tweet.fields": "author_id,attachments,created_at,entities",
           "user.fields": "id,username,verified,verified_type,subscription_type",
           "media.fields": "media_key,type,url",
         });
@@ -443,12 +470,13 @@ export const pollMentions = internalAction({
         // This guard runs before persistence, wallet provisioning, parsing, AI,
         // transaction execution, or reply publication. Parent/thread text is
         // never considered: `mention.text` is the direct post's text from X.
-        if (shouldSuppressXResponse(mention.text)) continue;
+        const directText = expandXUrls(mention);
+        if (shouldSuppressXResponse(directText)) continue;
         const user = users.get(mention.author_id);
         if (!user || user.id === botUserId) continue;
         const firstMedia = mention.attachments?.media_keys?.map((key) => media.get(key)).find((item) => item?.type === "photo" && item.url);
         const reserved = await ctx.runMutation(internal.xReplies.reserveInteraction, {
-          postId: mention.id, authorXUserId: user.id, text: mention.text, ...(firstMedia?.url ? { mediaUrl: firstMedia.url } : {}),
+          postId: mention.id, authorXUserId: user.id, text: directText, ...(firstMedia?.url ? { mediaUrl: firstMedia.url } : {}),
         });
         if (!reserved) continue;
         await ctx.runMutation(internal.wallets.upsertXUser, {
@@ -470,10 +498,10 @@ export const pollMentions = internalAction({
           });
           continue;
         }
-        await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "processing", commandKind: parseWalletCommand(mention.text).kind });
+        await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "processing", commandKind: parseWalletCommand(directText).kind });
         try {
-          if (isWalletFeatureQuestion(mention.text)) {
-            const reply = await generateWalletInformationReply(mention.text);
+          if (isWalletFeatureQuestion(directText)) {
+            const reply = await generateWalletInformationReply(directText);
             const responsePostId = await publishReply(reply, mention.id);
             await ctx.runMutation(internal.xReplies.updateInteraction, {
               postId: mention.id, status: "completed", commandKind: "wallet_information", responsePostId,
@@ -481,10 +509,10 @@ export const pollMentions = internalAction({
             processed += 1;
             continue;
           }
-          const command = parseWalletCommand(mention.text);
+          const command = parseWalletCommand(directText);
           if (command.kind === "unknown") {
             const context = await ctx.runQuery(internal.xReplies.getGeneralReplyContext, {});
-            const reply = await generateGeneralReply(mention.text, context || { name: "0x7a70", corruption: 0, hobbySlugs: [] });
+            const reply = await generateGeneralReply(directText, context || { name: "0x7a70", corruption: 0, hobbySlugs: [] });
             const responsePostId = await publishReply(reply, mention.id);
             await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "completed", commandKind: "general", responsePostId });
             processed += 1;
@@ -494,7 +522,7 @@ export const pollMentions = internalAction({
             ? await resolveXRecipient(ctx, mention.id, command.recipient)
             : undefined;
           const result = await ctx.runAction(internal.wallets.executeCommand, {
-            sourcePostId: mention.id, xUserId: user.id, text: mention.text,
+            sourcePostId: mention.id, xUserId: user.id, text: directText,
             ...(firstMedia?.url ? { mediaUrl: firstMedia.url } : {}),
             ...(recipientAddress ? { recipientAddress } : {}),
           });

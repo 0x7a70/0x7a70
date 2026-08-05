@@ -12,6 +12,8 @@ describe("X reply suppression", () => {
     expect(isWalletFeatureQuestion("@0x7a70 how does the wallet work?")).toBe(true);
     expect(isWalletFeatureQuestion("explain how token launches and dev buys work")).toBe(true);
     expect(isWalletFeatureQuestion("what commands can I use for the wallet?" )).toBe(true);
+    expect(isWalletFeatureQuestion("what is my wallet?")).toBe(false);
+    expect(isWalletFeatureQuestion("show my wallet address")).toBe(false);
     expect(isWalletFeatureQuestion("send 0.02 eth to 0x1111111111111111111111111111111111111111")).toBe(false);
   });
 

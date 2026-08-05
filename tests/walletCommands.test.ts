@@ -4,6 +4,7 @@ import { parseWalletCommand } from "../convex/walletCommands";
 describe("X wallet commands", () => {
   it("parses buys with default and custom slippage", () => {
     expect(parseWalletCommand("@0x7a70 buy $25 of $0x7a70")).toEqual({ kind: "buy", amount: "25", unit: "usd", token: "0x7a70", slippageBps: 250 });
+    expect(parseWalletCommand("buy $1,000 of ROOT")).toEqual({ kind: "buy", amount: "1000", unit: "usd", token: "ROOT", slippageBps: 250 });
     expect(parseWalletCommand("buy 0.02 eth of 0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f slippage 2.5%")).toEqual({
       kind: "buy", amount: "0.02", unit: "eth", token: "0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f", slippageBps: 250,
     });
@@ -58,6 +59,14 @@ describe("X wallet commands", () => {
     expect(parseWalletCommand(`transfer 0.03 eth to ${recipient}`)).toMatchObject({ kind: "send", amount: "0.03", unit: "eth", recipient });
   });
 
+  it("distinguishes a token contract from a recipient address", () => {
+    const token = "0x2222222222222222222222222222222222222222";
+    const recipient = "0x1111111111111111111111111111111111111111";
+    expect(parseWalletCommand(`send 100 ${token} to ${recipient}`)).toMatchObject({
+      kind: "send", amount: "100", unit: "token", token, recipient,
+    });
+  });
+
   it("accepts an X handle as a transfer recipient", () => {
     expect(parseWalletCommand("@0x7a70 send 0.03 eth to @rootfriend")).toMatchObject({
       kind: "send", amount: "0.03", unit: "eth", recipient: "@rootfriend",
@@ -65,6 +74,29 @@ describe("X wallet commands", () => {
     expect(parseWalletCommand("send @rootfriend 25 ROOT")).toMatchObject({
       kind: "send", amount: "25", unit: "token", token: "ROOT", recipient: "@rootfriend",
     });
+    expect(parseWalletCommand("transfer @rootfriend 1,250 of $ROOT")).toMatchObject({
+      kind: "send", amount: "1250", unit: "token", token: "ROOT", recipient: "@rootfriend",
+    });
+    expect(parseWalletCommand("send @rootfriend ROOT 2,500.5")).toMatchObject({
+      kind: "send", amount: "2500.5", unit: "token", token: "ROOT", recipient: "@rootfriend",
+    });
+    expect(parseWalletCommand("send @rootfriend $25 of ROOT")).toMatchObject({
+      kind: "send", amount: "25", unit: "usd", token: "ROOT", recipient: "@rootfriend",
+    });
+  });
+
+  it("broadly recognizes requests for the caller's wallet", () => {
+    expect(parseWalletCommand("what is my wallet?")).toEqual({ kind: "show_wallet" });
+    expect(parseWalletCommand("where can I find my wallet address")).toEqual({ kind: "show_wallet" });
+    expect(parseWalletCommand("give me the address for my wallet")).toEqual({ kind: "show_wallet" });
+    expect(parseWalletCommand("wallet please")).toEqual({ kind: "show_wallet" });
+    expect(parseWalletCommand("deposit address")).toEqual({ kind: "show_wallet" });
+    expect(parseWalletCommand("where do I send ETH?")).toEqual({ kind: "show_wallet" });
+  });
+
+  it("never infers a burn without the exact word burn", () => {
+    expect(parseWalletCommand("destroy 500 ROOT")).toEqual({ kind: "unknown", reason: "No supported wallet command was found." });
+    expect(parseWalletCommand("send 500 ROOT to @rootfriend")).toMatchObject({ kind: "send" });
   });
 
   it("parses burns and creator fee claims", () => {
@@ -82,6 +114,9 @@ describe("X wallet commands", () => {
     expect(parseWalletCommand("burn half of my ROOT")).toEqual({ kind: "burn", amount: "50", unit: "percent", token: "ROOT" });
     expect(parseWalletCommand("@0x7a70 send 12.5% of my ROOT to @recipient")).toEqual({
       kind: "send", amount: "12.5", unit: "percent", token: "ROOT", recipient: "@recipient",
+    });
+    expect(parseWalletCommand("transfer all ETH to @recipient")).toEqual({
+      kind: "send", amount: "100", unit: "percent", token: "ETH", recipient: "@recipient",
     });
   });
 });

@@ -14,10 +14,10 @@ const VERIFIED_FEE_LOCKER = "0x47eC8916647007c66985aa316f70C44Dd41D75EB";
 const VERIFIED_SWAP_ROUTER = "0xcaf681a66d020601342297493863e78c959e5cb2";
 const VERIFIED_SWAP_QUOTER = "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7";
 const VERIFIED_WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
-const DEFAULT_GAS_RESERVE_USD = "0.50";
 const DEFAULT_LAUNCH_WEBSITE = "https://0x7a70.wiki";
 const DEFAULT_LAUNCH_DESCRIPTION = "Launched on X to PotatoPad via @0x7a70.";
 const ROBINHOOD_EXPLORER_TX_BASE = "https://robinhoodchain.blockscout.com/tx";
+const ROBINHOOD_EXPLORER_ADDRESS_BASE = "https://robinhoodchain.blockscout.com/address";
 
 type SignerWallet = { walletRef: string; address: string };
 type SubmittedTransaction = {
@@ -43,6 +43,47 @@ function safeAddress(value: string) {
 
 function transactionUrl(transactionHash: string) {
   return `${ROBINHOOD_EXPLORER_TX_BASE}/${transactionHash}`;
+}
+
+function addressUrl(address: string) {
+  return `${ROBINHOOD_EXPLORER_ADDRESS_BASE}/${address}`;
+}
+
+function destinationLabel(recipient: string) {
+  return safeAddress(recipient) ? addressUrl(recipient) : recipient;
+}
+
+function assetLabel(token: string | undefined, fallback = "ETH") {
+  return token ? destinationLabel(token) : fallback;
+}
+
+function commandSummary(command: WalletCommand) {
+  if (command.kind === "send") {
+    const amount = command.unit === "usd" ? `$${command.amount} of ${assetLabel(command.token)}`
+      : command.unit === "percent" ? `${command.amount}% of ${assetLabel(command.token)}`
+        : `${command.amount} ${assetLabel(command.token)}`;
+    return `Sent ${amount} to ${destinationLabel(command.recipient)}.`;
+  }
+  if (command.kind === "burn") {
+    const amount = command.unit === "usd" ? `$${command.amount} of ${assetLabel(command.token)}`
+      : command.unit === "percent" ? `${command.amount}% of ${assetLabel(command.token)}` : `${command.amount} ${assetLabel(command.token)}`;
+    return `Burned ${amount}.`;
+  }
+  if (command.kind === "buy") return `Bought ${command.unit === "usd" ? `$${command.amount}` : `${command.amount} ETH`} of ${assetLabel(command.token)}.`;
+  if (command.kind === "sell") return `Sold ${command.unit === "percent" ? `${command.amount}% of ` : `${command.amount} `}${assetLabel(command.token)}.`;
+  if (command.kind === "claim_fees") return `Claimed creator fees${command.token ? ` for ${assetLabel(command.token)}` : ""}.`;
+  if (command.kind === "launch") return `Planted ${command.symbol}.`;
+  return "Transaction submitted.";
+}
+
+function transactionMessage(command: WalletCommand, transactionHash: string, status: "submitted" | "confirmed", tokenAddress?: string) {
+  const summary = status === "submitted" ? `${commandSummary(command)} Confirmation pending.` : commandSummary(command);
+  const tokenLine = command.kind === "launch" && tokenAddress ? `\nYour token: ${addressUrl(tokenAddress)}` : "";
+  return `${summary}${tokenLine}\nYour TXN: ${transactionUrl(transactionHash)}`;
+}
+
+function fundingMessage(message: string, walletAddress: string) {
+  return /Add ETH for gas/i.test(message) ? `${message}\nYour wallet: ${addressUrl(walletAddress)}` : message;
 }
 
 function signerConfiguration() {
@@ -437,11 +478,9 @@ function isPremium(subscriptionType?: string) {
 
 function safeFailure(error: unknown) {
   const message = error instanceof Error ? error.message : "wallet request failed";
-  if (/reserve|ending balance/i.test(message)) {
-  console.error("wallet_reserve_failure", { message });
-  return message;
-}
-if (/insufficient/i.test(message)) return "insufficient funds for the amount and gas";
+  if (/ETH transfer amount plus gas exceeds/i.test(message)) return "The ETH transfer amount plus gas exceeds your wallet balance. Add ETH for gas.";
+  if (/insufficient ETH for gas/i.test(message)) return "Add ETH for gas.";
+  if (/insufficient/i.test(message)) return "Insufficient funds for the requested amount.";
   if (/image/i.test(message)) return "the token image could not be prepared";
   if (/specify the token|ticker matches|launch was not found|no completed PotatoPad launch/i.test(message)) return message;
   if (/launch creator|fee beneficiary/i.test(message)) return "that wallet is not authorized to claim fees for this launch";
@@ -461,10 +500,6 @@ return message;
 
 async function submit(wallet: { signerWalletRef: string; address: string }, xUserId: string, requestId: string, operation: Record<string, unknown>) {
   if (!executionEnabled()) throw new Error("crypto execution is disabled");
-  const reserveUsd = process.env.WALLET_MIN_GAS_RESERVE_USD || DEFAULT_GAS_RESERVE_USD;
-  if (!/^\d+(?:\.\d{1,2})?$/.test(reserveUsd) || Number(reserveUsd) <= 0) {
-    throw new Error("wallet gas reserve is not configured safely");
-  }
   return await signerRequest<SubmittedTransaction>("/v1/transactions/execute", {
     idempotencyKey: requestId,
     ownerReference: `x:${xUserId}`,
@@ -472,13 +507,6 @@ async function submit(wallet: { signerWalletRef: string; address: string }, xUse
     walletRef: wallet.signerWalletRef,
     expectedFrom: wallet.address,
     requireSimulation: true,
-    balancePolicy: {
-      nativeAsset: "ETH",
-      minimumEndingBalanceUsd: reserveUsd,
-      quoteAtExecution: true,
-      includeMaximumGasCost: true,
-      failClosedWhenQuoteUnavailable: true,
-    },
     operation,
   });
 }
@@ -526,15 +554,9 @@ export const executeCommand = internalAction({
       return { ok: false, message: safeFailure(error) };
     }
     if (!wallet || wallet.status !== "active") return { ok: false, message: "the wallet root is unavailable" };
-   if (command.kind === "create_wallet" || command.kind === "show_wallet") {
-  const explorerUrl =
-    `https://robinhoodchain.blockscout.com/address/${wallet.address}`;
-
-  return {
-    ok: true,
-    message: `robinhood chain wallet: ${explorerUrl}`,
-  };
-}
+    if (command.kind === "create_wallet" || command.kind === "show_wallet") {
+      return { ok: true, message: `Your wallet: ${addressUrl(wallet.address)}` };
+    }
     if (command.kind === "show_balance") {
       try {
         const balance = await signerRequest<{ display: string }>("/v1/wallets/balance", {
@@ -559,7 +581,7 @@ export const executeCommand = internalAction({
       return {
         ok: prior?.status === "confirmed",
         message: prior?.transactionHash
-          ? `already processed: ${transactionUrl(prior.transactionHash)}`
+          ? `Already processed.\nYour TXN: ${transactionUrl(prior.transactionHash)}`
           : "this command is already being processed",
         ...(prior?.transactionHash ? { transactionHash: prior.transactionHash } : {}),
       };
@@ -610,11 +632,10 @@ export const executeCommand = internalAction({
           await ctx.runAction(internal.wallets.reconcileTransaction, { requestId });
           const reconciled = await ctx.runQuery(internal.wallets.getReconciliationContext, { requestId });
           if (reconciled?.request.status === "confirmed" && command.kind === "launch" && reconciled.launch?.tokenAddress) {
-            const devBuy = command.devBuy ? ` dev buy: ${reconciled.launch.devBuySucceeded ? "successful" : "failed"}.` : "";
-            return { ok: true, transactionHash: result.transactionHash, message: `${command.symbol} planted. contract: ${reconciled.launch.tokenAddress}.${devBuy} tx: ${transactionUrl(result.transactionHash)}.${warning}` };
+            return { ok: true, transactionHash: result.transactionHash, message: `${transactionMessage(command, result.transactionHash, "confirmed", reconciled.launch.tokenAddress)}${warning}` };
           }
           if (reconciled?.request.status === "failed") throw new Error(reconciled.request.safeError || "transaction reverted");
-          return { ok: true, transactionHash: result.transactionHash, message: `submitted to the roots: ${transactionUrl(result.transactionHash)}. confirmation is still growing.${warning}` };
+          return { ok: true, transactionHash: result.transactionHash, message: `${transactionMessage(command, result.transactionHash, "submitted")}${warning}` };
         }
         if (result.status === "broadcast" || result.status === "pending") throw new Error("signer returned an unpersisted broadcast");
         if (command.kind === "launch" && (!result.tokenAddress || !safeAddress(result.tokenAddress))) {
@@ -629,13 +650,9 @@ export const executeCommand = internalAction({
           blockNumber: result.blockNumber, launch: launchBase,
         });
         if (command.kind === "launch") {
-          const devBuy = command.devBuy ? ` dev buy: ${result.devBuySucceeded ? "successful" : "failed"}.` : "";
-          return { ok: true, transactionHash: result.transactionHash, message: `${command.symbol} planted. contract: ${result.tokenAddress}.${devBuy} tx: ${transactionUrl(result.transactionHash)}.${warning}` };
+          return { ok: true, transactionHash: result.transactionHash, message: `${transactionMessage(command, result.transactionHash, "confirmed", result.tokenAddress)}${warning}` };
         }
-        if (command.kind === "buy" || command.kind === "sell") {
-          return { ok: true, transactionHash: result.transactionHash, message: `${command.kind} confirmed: ${transactionUrl(result.transactionHash)}.${warning}` };
-        }
-        return { ok: true, transactionHash: result.transactionHash, message: `confirmed: ${transactionUrl(result.transactionHash)}.${warning}` };
+        return { ok: true, transactionHash: result.transactionHash, message: `${transactionMessage(command, result.transactionHash, "confirmed")}${warning}` };
       } catch (error) {
         if (command.kind === "sell" && error instanceof Error && /sell approval required/i.test(error.message)) {
           try {
@@ -653,17 +670,18 @@ export const executeCommand = internalAction({
             await ctx.runAction(internal.wallets.reconcileTransaction, { requestId });
             return {
               ok: true, transactionHash: approval.transactionHash,
-              message: `router approval submitted: ${transactionUrl(approval.transactionHash)}. after it confirms, send the sell command again.${warning}`,
+              message: `Router approval submitted. After it confirms, send the sell command again.\nYour TXN: ${transactionUrl(approval.transactionHash)}${warning}`,
             };
           } catch (approvalError) {
             const approvalMessage = safeFailure(approvalError);
             await ctx.runMutation(internal.wallets.updateWalletRequest, { requestId, status: "failed", safeError: approvalMessage });
-            return { ok: false, message: `${approvalMessage}.${warning}` };
+            return { ok: false, message: `${fundingMessage(approvalMessage, wallet.address)}${warning}` };
           }
         }
         const message = safeFailure(error);
+        const userMessage = fundingMessage(message, wallet.address);
         await ctx.runMutation(internal.wallets.updateWalletRequest, { requestId, status: "failed", safeError: message });
-        return { ok: false, message: `${message}.${warning}` };
+        return { ok: false, message: `${userMessage}${warning}` };
       }
     }
     return { ok: false, message: "that wallet command is not available yet" };
@@ -680,7 +698,8 @@ async function operationFor(
   if (command.kind === "send") {
     const recipient = safeAddress(command.recipient) ? command.recipient : recipientAddress;
     if (!recipient || !safeAddress(recipient) || recipient.toLowerCase() === DEAD_ADDRESS.toLowerCase()) throw new Error("invalid transfer destination");
-    return { type: command.unit === "token" ? "erc20_transfer" : "eth_transfer", recipient, amount: command.amount, unit: command.unit, token: command.token };
+    const nativeEth = !command.token || /^eth$/i.test(command.token);
+    return { type: nativeEth ? "eth_transfer" : "erc20_transfer", recipient, amount: command.amount, unit: command.unit, ...(nativeEth ? {} : { token: command.token }) };
   }
   if (command.kind === "burn") {
     return { type: "erc20_burn_to_dead", deadAddress: DEAD_ADDRESS, amount: command.amount, unit: command.unit, token: command.token };

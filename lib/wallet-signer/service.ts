@@ -306,7 +306,11 @@ async function buildCall(request: ExecutionRequest, price: number) {
   }
   if (op.type === "eth_transfer") {
     if (op.recipient.toLowerCase() === DEAD_ADDRESS.toLowerCase()) throw new Error("native transfers to the dead address are not supported");
-    return { to: op.recipient as Address, data: "0x" as Hex, value: op.unit === "usd" ? usdToWei(op.amount, price) : parseEther(op.amount) };
+    return {
+      to: op.recipient as Address,
+      data: "0x" as Hex,
+      value: op.unit === "percent" ? 0n : op.unit === "usd" ? usdToWei(op.amount, price) : parseEther(op.amount),
+    };
   }
   if (op.type === "erc20_transfer" || op.type === "erc20_burn_to_dead") {
     const owner = request.expectedFrom as Address;
@@ -315,7 +319,7 @@ async function buildCall(request: ExecutionRequest, price: number) {
     const recipient = op.type === "erc20_transfer" ? op.recipient : op.deadAddress;
     if (op.type === "erc20_burn_to_dead" && recipient.toLowerCase() !== DEAD_ADDRESS.toLowerCase()) throw new Error("invalid burn address");
     let rawAmount = op.unit === "usd" ? 0n : await tokenAmount(owner, token, op.amount, op.unit, decimals);
-    if (op.type === "erc20_burn_to_dead" && op.unit === "usd") {
+    if (op.unit === "usd") {
       const [factory, weth] = await Promise.all([
         publicClient.readContract({ address: POTATOPAD_CURVE_ADDRESS as Address, abi: padAbi, functionName: "v3Factory" }),
         publicClient.readContract({ address: POTATOPAD_CURVE_ADDRESS as Address, abi: padAbi, functionName: "weth" }),
@@ -331,7 +335,7 @@ async function buildCall(request: ExecutionRequest, price: number) {
       });
       rawAmount = quote[0];
     }
-    if (rawAmount <= 0n) throw new Error("burn amount must be positive");
+    if (rawAmount <= 0n) throw new Error(op.type === "erc20_burn_to_dead" ? "burn amount must be positive" : "send amount must be positive");
     return {
       to: token,
       data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient as Address, rawAmount] }),
@@ -418,35 +422,86 @@ export async function executeTransaction(request: ExecutionRequest) {
   if (!Number.isFinite(maxUsd) || maxUsd <= 0) throw new Error("maximum transaction value is not configured");
   const account = await accountFor(request.walletRef, request.expectedFrom, request.ownerReference);
   const price = await ethUsd();
-  const call = await buildCall(request, price);
+  let call = await buildCall(request, price);
+  const fees = await publicClient.estimateFeesPerGas();
+  const { maxFeePerGas, maxPriorityFeePerGas } = fees;
+  if (maxFeePerGas === undefined || maxFeePerGas <= 0n) throw new Error("fee estimate unavailable");
+  const priorityFee = maxPriorityFeePerGas ?? 0n;
+  const balance = await publicClient.getBalance({ address: account.address });
+
+  if (balance === 0n) throw new Error("insufficient ETH for gas");
+  if (request.operation.type === "eth_transfer" && request.operation.unit !== "percent" && balance <= call.value) {
+    throw new Error("ETH transfer amount plus gas exceeds wallet balance");
+  }
+
+  let estimatedGas: bigint;
+  try {
+    estimatedGas = await publicClient.estimateGas({
+      account: account.address,
+      ...call,
+      ...(request.operation.type === "eth_transfer" && request.operation.unit === "percent" ? { value: 1n } : {}),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/insufficient funds|insufficient balance/i.test(message)) {
+      throw new Error(request.operation.type === "eth_transfer"
+        ? "ETH transfer amount plus gas exceeds wallet balance"
+        : "insufficient ETH for gas");
+    }
+    throw error;
+  }
+  let gas = estimatedGas * 125n / 100n;
+
+  if (request.operation.type === "eth_transfer" && request.operation.unit === "percent") {
+    const scaledPercent = parseUnits(request.operation.amount, 4);
+    if (scaledPercent <= 0n || scaledPercent > 1_000_000n) throw new Error("percentage must be greater than zero and no more than 100");
+    const maximumGasCost = gas * maxFeePerGas;
+    if (balance <= maximumGasCost) throw new Error("insufficient ETH for gas");
+    const requestedValue = scaledPercent === 1_000_000n
+      ? balance - maximumGasCost
+      : balance * scaledPercent / 1_000_000n;
+    call = { ...call, value: requestedValue };
+    try {
+      estimatedGas = await publicClient.estimateGas({ account: account.address, ...call });
+      gas = estimatedGas * 125n / 100n;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      // Some RPC nodes reject an all-balance estimate because they independently
+      // add gas to the supplied value. The buffered estimate made with one wei
+      // remains valid for an ordinary native transfer.
+      if (scaledPercent !== 1_000_000n || !/insufficient funds|insufficient balance/i.test(message)) throw error;
+    }
+    const finalGasCost = gas * maxFeePerGas;
+    if (scaledPercent === 1_000_000n) {
+      if (balance <= finalGasCost) throw new Error("insufficient ETH for gas");
+      call = { ...call, value: balance - finalGasCost };
+    } else if (balance < call.value + finalGasCost) {
+      throw new Error("ETH transfer amount plus gas exceeds wallet balance");
+    }
+  } else {
+    const maximumGasCost = gas * maxFeePerGas;
+    if (balance < maximumGasCost) throw new Error("insufficient ETH for gas");
+    if (balance < call.value + maximumGasCost) {
+      throw new Error(request.operation.type === "eth_transfer"
+        ? "ETH transfer amount plus gas exceeds wallet balance"
+        : "insufficient ETH for gas");
+    }
+  }
+
   const valueUsd = Number(formatEther(call.value)) * price;
   if (valueUsd > maxUsd) throw new Error("transaction exceeds the configured value limit");
-
   await publicClient.call({ account: account.address, ...call });
-  const estimatedGas = await publicClient.estimateGas({ account: account.address, ...call });
-  const gas = estimatedGas * 125n / 100n;
-  const fees = await publicClient.estimateFeesPerGas();
-const { maxFeePerGas, maxPriorityFeePerGas } = fees;
-
-if (maxFeePerGas === undefined || maxFeePerGas <= 0n) {
-  throw new Error("fee estimate unavailable");
-}
-
-const priorityFee = maxPriorityFeePerGas ?? 0n;  
-const balance = await publicClient.getBalance({ address: account.address });
-  const reserve = usdToWei(request.balancePolicy.minimumEndingBalanceUsd, price);
-  if (balance < call.value + gas * maxFeePerGas + reserve) throw new Error("ending balance would violate the reserve policy");
   const nonce = await publicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
- const unsigned = serializeTransaction({
-  chainId: ROBINHOOD_CHAIN_ID,
-  type: "eip1559",
-  nonce,
-  gas,
-  maxFeePerGas,
-  maxPriorityFeePerGas: priorityFee,
-  ...call,
-});
- const signed = await cdpClient().evm.signTransaction({ address: account.address, transaction: unsigned, idempotencyKey: request.idempotencyKey });
+  const unsigned = serializeTransaction({
+    chainId: ROBINHOOD_CHAIN_ID,
+    type: "eip1559",
+    nonce,
+    gas,
+    maxFeePerGas,
+    maxPriorityFeePerGas: priorityFee,
+    ...call,
+  });
+  const signed = await cdpClient().evm.signTransaction({ address: account.address, transaction: unsigned, idempotencyKey: request.idempotencyKey });
   return {
     transactionHash: keccak256(signed.signature), status: "prepared" as const,
     signedTransaction: signed.signature, valueWei: call.value.toString(),

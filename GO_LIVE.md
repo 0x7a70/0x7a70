@@ -39,7 +39,6 @@ operations. Keep all public execution flags false until the activation section.
 - `WALLET_SIGNER_URL=https://0x7a70.wiki/api/wallet-signer`
 - `WALLET_SIGNER_TOKEN`
 - `ROBINHOOD_RPC_URL`
-- `WALLET_MIN_GAS_RESERVE_USD=0.50` or the final operator choice
 - `POTATOPAD_CURVE_ADDRESS=0xbE2aCD9044516399aa4C697c299571664fBe9d4B`
 - the selected `X_REPLY_*` limits
 
@@ -59,7 +58,6 @@ Before activation, retain `X_REPLIES_ENABLED=false`,
 - `WALLET_SIGNER_IDEMPOTENCY_SECRET`
 - `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, `CDP_WALLET_SECRET`
 - `WALLET_MAX_TRANSACTION_USD=10000`
-- `WALLET_MIN_GAS_RESERVE_USD=0.50` or the final operator choice
 - `ROBINHOOD_RPC_URL`
 - `X_CRYPTO_EXECUTION_ENABLED=false` before activation
 

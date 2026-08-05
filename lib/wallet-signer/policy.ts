@@ -31,16 +31,11 @@ const commonExecution = z.object({
   idempotencyKey: z.string().min(8).max(180), chainId: z.literal(ROBINHOOD_CHAIN_ID),
   ownerReference: z.string().regex(/^x:\d{1,30}$/), walletRef: address,
   expectedFrom: address, requireSimulation: z.literal(true),
-  balancePolicy: z.object({
-    nativeAsset: z.literal("ETH"), minimumEndingBalanceUsd: decimal,
-    quoteAtExecution: z.literal(true), includeMaximumGasCost: z.literal(true),
-    failClosedWhenQuoteUnavailable: z.literal(true),
-  }).strict(),
 });
 
 const operationSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("eth_transfer"), recipient: address, amount: decimal, unit: z.enum(["eth", "usd"]), token: z.unknown().optional() }).strict(),
-  z.object({ type: z.literal("erc20_transfer"), recipient: address, amount: decimal, unit: z.enum(["token", "percent"]), token: z.string().min(1).max(50) }).strict(),
+  z.object({ type: z.literal("eth_transfer"), recipient: address, amount: decimal, unit: z.enum(["eth", "usd", "percent"]), token: z.unknown().optional() }).strict(),
+  z.object({ type: z.literal("erc20_transfer"), recipient: address, amount: decimal, unit: z.enum(["token", "usd", "percent"]), token: z.string().min(1).max(50) }).strict(),
   z.object({ type: z.literal("erc20_burn_to_dead"), deadAddress: address, amount: decimal, unit: z.enum(["token", "usd", "percent"]), token: z.string().min(1).max(50) }).strict(),
   z.object({ type: z.literal("erc20_approve_router"), token: z.string().min(1).max(50), amount: decimal, unit: z.enum(["token", "percent"]), routerAddress: z.literal(UNISWAP_V3_ROUTER_ADDRESS) }).strict(),
   z.object({

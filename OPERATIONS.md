@@ -193,14 +193,11 @@ allowlist, exact approvals, and operation allowlist. It must reject arbitrary
 calldata. USD conversions happen there using a trusted, expiring quote; the AI
 never performs financial arithmetic.
 
-Every executed operation also carries a mandatory native-balance policy. After
-the requested value and the transaction's maximum estimated gas are deducted,
-the wallet must retain at least the fresh ETH equivalent of
-`WALLET_MIN_GAS_RESERVE_USD` (default `$0.50`). The signer, not Convex, obtains
-the quote and performs integer wei arithmetic. If the quote, balance, or gas
-estimate is unavailable, execution fails closed. This applies to launches,
-native/token sends, burns, and fee claims so even a token-only action cannot
-consume the ETH intended for the next interaction's gas.
+There is no fixed post-transaction ETH reserve. The signer still verifies that
+the wallet can pay the current transaction's maximum estimated gas. When a user
+requests all ETH, the signer subtracts that transaction's estimated maximum gas
+cost and transfers the remainder. Other transactions fail with a funding
+message when the wallet cannot cover both the requested value and current gas.
 
 Supported operation types are `eth_transfer`, `erc20_transfer`,
 `erc20_burn_to_dead`, `erc20_approve_router`, `uniswap_v3_buy`,

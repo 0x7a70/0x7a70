@@ -14,7 +14,6 @@ describe("wallet signer policy", () => {
       idempotencyKey: "x:123:swap:1", chainId: 4663 as const, ownerReference: "x:123",
       walletRef: "0x1111111111111111111111111111111111111111", expectedFrom: "0x1111111111111111111111111111111111111111",
       requireSimulation: true as const,
-      balancePolicy: { nativeAsset: "ETH" as const, minimumEndingBalanceUsd: "0.50", quoteAtExecution: true as const, includeMaximumGasCost: true as const, failClosedWhenQuoteUnavailable: true as const },
     };
     const buy = {
       type: "uniswap_v3_buy" as const, token: "$0x7a70", amount: "10", unit: "usd" as const, slippageBps: 500,
@@ -44,7 +43,6 @@ describe("wallet signer policy", () => {
       walletRef: "0x1111111111111111111111111111111111111111",
       expectedFrom: "0x1111111111111111111111111111111111111111",
       requireSimulation: true,
-      balancePolicy: { nativeAsset: "ETH", minimumEndingBalanceUsd: "0.50", quoteAtExecution: true, includeMaximumGasCost: true, failClosedWhenQuoteUnavailable: true },
       operation: { type: "arbitrary_calldata", to: "0x2222222222222222222222222222222222222222", data: "0xdeadbeef" },
     })).toThrow();
   });
@@ -74,11 +72,6 @@ describe("wallet signer policy", () => {
       walletRef: "0x1111111111111111111111111111111111111111",
       expectedFrom: "0x1111111111111111111111111111111111111111",
       requireSimulation: true as const,
-      balancePolicy: {
-        nativeAsset: "ETH" as const, minimumEndingBalanceUsd: "0.50",
-        quoteAtExecution: true as const, includeMaximumGasCost: true as const,
-        failClosedWhenQuoteUnavailable: true as const,
-      },
     };
     const operation = {
       type: "potatopad_creator_fee_claim" as const,
