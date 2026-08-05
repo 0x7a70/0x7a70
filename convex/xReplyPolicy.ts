@@ -9,6 +9,6 @@ export function shouldSuppressXResponse(directReplyText: string) {
 /** Questions about mechanics are informational, never transaction authority. */
 export function isWalletFeatureQuestion(directReplyText: string) {
   const text = directReplyText.replace(/@[a-zA-Z0-9_]{1,15}/g, " ").replace(/\s+/g, " ").trim();
-  if (!/\b(?:wallet|launch|plant|token|coin|dev\s*buy|burn|transfer|send|claim\s+fees?)\b/i.test(text)) return false;
+  if (!/\b(?:wallet|launch|plant|token|coin|dev\s*buy|buy|sell|swap|slippage|burn|transfer|send|claim\s+fees?)\b/i.test(text)) return false;
   return /\b(?:how\s+(?:does|do|would|can)|how\s+to|what\s+(?:is|are|does)|explain|tell\s+me\s+about|which\s+(?:features|commands)|what\s+(?:features|commands))\b/i.test(text);
 }

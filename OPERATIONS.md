@@ -76,7 +76,7 @@ old pending updates, and prints the exact `TELEGRAM_BOT_USERNAME` value to set
 in Convex. Keep group privacy mode enabled in BotFather. Add the bot to the
 group and mention it once; the group is registered automatically with thought
 transmissions enabled. A dedicated 0x7a70 thought is then generated and sent
-every 10–15 minutes. The next execution is durably scheduled before generation,
+every 45-60 minutes. The next execution is durably scheduled before generation,
 so a failed AI or Telegram request does not stop the loop.
 
 To stop group thoughts without removing the bot, set `thoughtsEnabled` to
@@ -93,10 +93,25 @@ testing.
 
 ## X replies and X-linked wallets
 
-The reply and wallet infrastructure is deliberately inert. `X_REPLIES_ENABLED`
-and `X_CRYPTO_EXECUTION_ENABLED` default to `false`, and no cron invokes
-`xReplies:pollMentions`. Do not add that cron or enable either flag until X has
+The reply and wallet infrastructure is deliberately inert by default.
+`X_REPLIES_ENABLED` and `X_CRYPTO_EXECUTION_ENABLED` default to `false`. A
+one-minute cron invokes `xReplies:pollMentions`, but the action exits before
+contacting X while replies are disabled. Do not enable either flag until X has
 granted written approval and the signing service has completed security review.
+
+Mention polling requests up to 100 records per page and follows pagination for
+up to 1,000 records in one run. It advances the durable `since_id` cursor only
+after every fetched page has been processed. A backlog beyond that bound fails
+without advancing the cursor, allowing the next run to retry without skipping
+mentions. A two-minute lease prevents overlapping cron invocations.
+
+The 1,000-record value is only an exceptional backlog ceiling, not a reply
+allowance. A normal one-minute poll makes one request for at most 100 records.
+Reply admission remains governed by the configured per-user and global limits.
+
+Launch authorization requires X verification. There is no separate manual
+launch allowlist; any account reported as verified by X can submit a launch
+command, subject to the normal execution flag, limits, and signer policies.
 
 An X post containing `do not reply` (including `(do not reply)`, matched without
 regard to case or repeated spaces) is discarded before any reply, AI request,
@@ -107,6 +122,27 @@ Direct questions about how wallet, transaction, burn, fee-claim, dev-buy, and
 PotatoPad launch mechanics work are routed to a factual information response
 before command parsing. The response is grounded in a fixed capability sheet,
 uses only the direct post, and cannot authorize a wallet action.
+
+Direct X interactions use two routes. Wallet questions and recognized wallet
+commands enter the factual wallet route; every other qualifying direct mention
+enters the general 0x7a70 conversation route, which uses the live personality,
+corruption, and hobbies with no thread memory. The worker ignores its own X user
+ID and deduplicates every source post ID.
+
+Reply admission is enforced atomically before AI generation or wallet work. The
+defaults are 30 accepted interactions per user per UTC day, 250 globally per UTC
+day, 5 per user and 25 globally in a rolling 10-minute window, and one accepted
+interaction per user every 30 seconds. Rate-limited posts receive no reply. Adjust
+these with `X_REPLY_USER_DAILY_LIMIT`, `X_REPLY_GLOBAL_DAILY_LIMIT`,
+`X_REPLY_USER_WINDOW_LIMIT`, `X_REPLY_GLOBAL_WINDOW_LIMIT`,
+`X_REPLY_WINDOW_MINUTES`, and `X_REPLY_COOLDOWN_SECONDS`.
+
+Wallet and launch facts are shared across the website terminal, Telegram user
+replies, and X user replies, but the prompt block is disabled unless
+`WALLET_FEATURE_PROMPTS_ENABLED=true`. Leave the example setting commented out
+until the wallet feature is publicly launched. Enabling prompt information does
+not enable execution; `X_REPLIES_ENABLED` and `X_CRYPTO_EXECUTION_ENABLED` remain
+separate controls.
 
 Wallet private keys must never enter Convex, Vercel, application logs, or local
 environment files. Coinbase CDP holds the key material. Its API key ID, API key
@@ -124,18 +160,32 @@ random `WALLET_SIGNER_TOKEN`. Vercel additionally requires:
 - `WALLET_MAX_TRANSACTION_USD`, an explicit fail-closed per-transaction ceiling;
 - optionally `ROBINHOOD_RPC_URL`; otherwise the official mainnet RPC is used.
 
+Scope every CDP credential and wallet secret to Vercel Production only. Preview
+deployments must not receive them. The gateway also refuses CDP operations when
+Vercel reports any environment other than `production`.
+
 The gateway provides these authenticated operations:
 
 - `POST /v1/wallets`: idempotently provision one chain-4663 wallet for an X user.
 - `POST /v1/wallets/balance`: return a display balance after resolving an exact
   contract; reject ambiguous tickers.
-- `POST /v1/transactions/execute`: simulate, enforce policy, sign, broadcast,
-  wait for a receipt, and return the transaction hash, status, block, resolved
-  wei value, and launch event results where relevant.
+- `POST /v1/transactions/execute`: simulate, enforce policy, and sign without
+  broadcasting. Convex durably stores the signed transaction and deterministic
+  transaction hash before the next phase begins.
+- `POST /v1/transactions/broadcast`: verify the stored signed transaction and
+  its owner, submit that exact transaction, and inspect a prompt receipt when
+  available.
+- `POST /v1/transactions/status`: reconcile a submitted transaction and verify
+  its sender, value, receipt status, and launch events where relevant.
 
 Successful X wallet responses include the confirmed transaction's public
 Robinhood Chain Blockscout URL (`https://robinhoodchain.blockscout.com/tx/<hash>`).
 Idempotent replays of an already-confirmed request return the same URL.
+
+The request is stored as `prepared` before broadcast. If a receipt is not
+available promptly, it becomes `broadcast`; Convex then checks it again with
+bounded exponential backoff until it confirms or reverts. Never delete prepared
+or broadcast records during a deployment or secret rotation.
 
 The signer must independently enforce the expected source address, chain ID
 4663, per-user ownership, daily/value limits, idempotency key, contract
@@ -153,16 +203,52 @@ native/token sends, burns, and fee claims so even a token-only action cannot
 consume the ETH intended for the next interaction's gas.
 
 Supported operation types are `eth_transfer`, `erc20_transfer`,
-`erc20_burn_to_dead`, `potatopad_launch`, and
-`potatopad_creator_fee_claim`. The verified curve pad is
+`erc20_burn_to_dead`, `erc20_approve_router`, `uniswap_v3_buy`,
+`uniswap_v3_sell`, `potatopad_launch`, and `potatopad_creator_fee_claim`.
+ERC-20 burns accept either a direct token quantity or a USD-denominated amount.
+For a USD burn, the signer converts USD to target WETH using its fresh ETH/USD
+quote, obtains the required token input through the verified V3 exact-output
+quoter, and transfers that calculated token quantity to the fixed dead address.
+Token sends, sells, and burns also accept `all`, `half`, or an explicit
+percentage from greater than zero through 100%. The signer calculates the raw
+amount from the live token balance at execution time. Percentage operations do
+not use AI arithmetic or a previously cached balance.
+Normal swaps use exact input and default to 2.5% maximum slippage; an X command
+may explicitly select 0.1% through 20%. Sell approvals are exact-amount and
+restricted to the verified router. When approval is needed, the approval is
+submitted first and the user must repeat the sell after it confirms.
+
+The verified Robinhood Chain swap contracts are:
+
+- router: `0xcaf681a66d020601342297493863e78c959e5cb2`
+- quoter: `0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7`
+- WETH: `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73`
+- pool fee tier: `10000` (1%)
+
+The verified curve pad is
 `0xbE2aCD9044516399aa4C697c299571664fBe9d4B`. Launches call its initial,
 payable `createToken(name,symbol,meta,salt)` entry point and attach the dev-buy
-value atomically. They do not call `bond()`; bonding is a later curve milestone.
+value atomically. Initial dev buys have a hard maximum of `0.02627 ETH`. USD
+amounts are converted using the execution-time ETH quote and must remain below
+the same wei-denominated cap. They do not call `bond()`; bonding is a later
+curve milestone.
 
-Fee claims remain deliberately disabled in the gateway. Before enabling them,
-resolve the token's actual launch pad and position from `TokenCreated`/pad
-state, read that pad's `locker()`, verify its deployed ABI, then implement its
-exact collection and creator-claim calls. Never assume one global locker.
+The launch salt is not merely random. The signer deterministically searches
+candidate salts using the verified token factory's `initCodeHash` and the exact
+CREATE2 calculation performed by PotatoCurvePad until it finds an unused address
+whose first four hexadecimal characters are `7a70`. It verifies that neither
+code nor a PotatoPad V3 pool already occupies the prediction. Launch receipts
+are rejected unless the emitted token address begins with `0x7a70`.
+
+Creator fee claims use the verified PotatoCurvePad at
+`0xbE2aCD9044516399aa4C697c299571664fBe9d4B` and its on-chain `curves(token)`
+record to resolve the creator and LP position. The pad's immutable `locker()`
+and the locker's reciprocal `pad()` must match the verified PotatoFeeLocker at
+`0x47eC8916647007c66985aa316f70C44Dd41D75EB`. The signer also verifies the
+locker's position creator, current beneficiary, and WETH/token pair before
+calling `collectAndClaim(positionId)`. Confirmation requires a matching
+`FeesCollected` event whose caller is the requesting wallet; any emitted
+`FeesClaimed` event must name that same wallet as beneficiary.
 
 Keep `X_CRYPTO_EXECUTION_ENABLED=false` through provisioning and read-only
 balance tests. Turning it on authorizes real irreversible mainnet transactions;

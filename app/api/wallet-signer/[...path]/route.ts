@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { balanceRequestSchema, executionRequestSchema, walletRequestSchema } from "@/lib/wallet-signer/policy";
-import { authorizeSigner, executeTransaction, provisionWallet, walletBalance } from "@/lib/wallet-signer/service";
+import { balanceRequestSchema, broadcastRequestSchema, executionRequestSchema, transactionStatusRequestSchema, walletRequestSchema } from "@/lib/wallet-signer/policy";
+import { authorizeSigner, broadcastTransaction, executeTransaction, provisionWallet, transactionStatus, walletBalance } from "@/lib/wallet-signer/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +33,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ pa
       return NextResponse.json(await walletBalance(input.expectedAddress as `0x${string}`, input.token));
     }
     if (path === "v1/transactions/execute") return NextResponse.json(await executeTransaction(executionRequestSchema.parse(body)));
+    if (path === "v1/transactions/broadcast") return NextResponse.json(await broadcastTransaction(broadcastRequestSchema.parse(body)));
+    if (path === "v1/transactions/status") return NextResponse.json(await transactionStatus(transactionStatusRequestSchema.parse(body)));
     return NextResponse.json({ error: "not found" }, { status: 404 });
   } catch (error) {
     return errorResponse(error);

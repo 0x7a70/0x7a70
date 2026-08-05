@@ -7,13 +7,19 @@ export function SiteHeader() {
     <header className="site-header">
       <nav aria-label="Site and external links">
         <div className="header-left-links">
-          <a className="header-contract" href={TOKEN_URL} target="_blank" rel="noreferrer">
-            0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f
-          </a>
-          <div className="header-directory-links">
-            <Link className="header-section-link" href="/hobbies">hobbies</Link>
-            <Link className="header-section-link" href="/works">works</Link>
-          </div>
+          <details className="header-menu">
+            <summary aria-label="open patch navigation">[ patch menu ]</summary>
+            <div className="header-menu-panel">
+              <a className="header-menu-link header-menu-contract" href={TOKEN_URL} target="_blank" rel="noreferrer">
+                <span>ca</span>
+                <code>0x7A701D2cA3274fA1a3BED634D5e9Fcd8E041693f</code>
+              </a>
+              <Link className="header-menu-link" href="/hobbies">hobbies</Link>
+              <Link className="header-menu-link" href="/works">works</Link>
+              <Link className="header-menu-link" href="/launches">launches</Link>
+              <Link className="header-menu-link" href="/launch">launch with 0x7a70bot</Link>
+            </div>
+          </details>
         </div>
         <a className="header-bot-link" href={TELEGRAM_BOT_URL} target="_blank" rel="noreferrer">
           0x7a70bot

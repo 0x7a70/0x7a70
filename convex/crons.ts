@@ -15,4 +15,12 @@ crons.interval(
   internal.ai.ensureWorkLoop,
 );
 
+// Safe to deploy before approval: the action exits without contacting X until
+// X_REPLIES_ENABLED is explicitly set to true in the Convex environment.
+crons.interval(
+  "poll direct X mentions",
+  { minutes: 1 },
+  internal.xReplies.pollMentions,
+);
+
 export default crons;

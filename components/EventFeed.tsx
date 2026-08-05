@@ -27,6 +27,20 @@ export function EventFeed({ potatoSlug }: { potatoSlug?: string }) {
     event.text.toLowerCase().startsWith(`${event.potatoName.toLowerCase()}'s `);
   const eventText = (event: PatchEvent) => {
     const text = withoutRepeatedName(event);
+    if (event.type === "token_launched" && event.tokenAddress) {
+      const addressIndex = text.toLowerCase().indexOf(event.tokenAddress.toLowerCase());
+      if (addressIndex >= 0) {
+        return (
+          <>
+            {text.slice(0, addressIndex)}
+            <a className="event-token-link" href={`https://potato.fm/token/${event.tokenAddress}`} target="_blank" rel="noreferrer">
+              {text.slice(addressIndex, addressIndex + event.tokenAddress.length)}
+            </a>
+            {text.slice(addressIndex + event.tokenAddress.length)}
+          </>
+        );
+      }
+    }
     if (event.type === "work_created" && event.workSlug && event.workTitle) {
       const titleIndex = text.toLowerCase().indexOf(event.workTitle.toLowerCase());
       const hobbyName = event.hobbySlug?.replaceAll("-", " ") || "";

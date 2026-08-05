@@ -4,6 +4,7 @@ import { internalAction, internalMutation, internalQuery, mutation } from "./_ge
 import { fill, normalize, openRouter } from "./ai";
 import { corruptionModifier, randomDelay, randomInt } from "./data";
 import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT, X_ASCII_ART } from "./generatedContent";
+import { walletFeaturePrompt } from "./walletFeaturePrompt";
 
 type TelegramUser = {
   id: number;
@@ -110,8 +111,92 @@ async function telegramRequest(method: string, body: Record<string, unknown>) {
   return payload.result;
 }
 
+export const prepareTokenLaunchAnnouncements = internalMutation({
+  args: { requestId: v.string() },
+  handler: async (ctx, { requestId }) => {
+    const launch = await ctx.db.query("tokenLaunches").withIndex("by_request_id", (q) => q.eq("requestId", requestId)).unique();
+    if (!launch?.tokenAddress) return [];
+    const chats = (await ctx.db.query("telegramChats").collect()).filter((chat) => chat.thoughtsEnabled);
+    const pending = [];
+    for (const chat of chats) {
+      let announcement = await ctx.db.query("telegramLaunchAnnouncements")
+        .withIndex("by_request_chat", (q) => q.eq("requestId", requestId).eq("chatId", chat.chatId))
+        .unique();
+      if (!announcement) {
+        const now = Date.now();
+        const id = await ctx.db.insert("telegramLaunchAnnouncements", {
+          requestId, chatId: chat.chatId, tokenAddress: launch.tokenAddress,
+          status: "pending", attempts: 0, createdAt: now, updatedAt: now,
+        });
+        announcement = await ctx.db.get(id);
+      }
+      if (announcement && announcement.status !== "posted" && announcement.attempts < 5) {
+        pending.push({
+          announcementId: announcement._id,
+          chatId: chat.chatId,
+          attempts: announcement.attempts,
+          tokenAddress: launch.tokenAddress,
+          tokenName: launch.name,
+          tokenSymbol: launch.symbol,
+        });
+      }
+    }
+    return pending;
+  },
+});
+
+export const markTokenLaunchAnnouncement = internalMutation({
+  args: {
+    announcementId: v.id("telegramLaunchAnnouncements"),
+    status: v.union(v.literal("posted"), v.literal("failed")),
+    attempts: v.number(), messageId: v.optional(v.string()), error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.announcementId, {
+      status: args.status, attempts: args.attempts, messageId: args.messageId,
+      error: args.error, updatedAt: Date.now(),
+    });
+  },
+});
+
+export const announceTokenLaunch = internalAction({
+  args: { requestId: v.string() },
+  handler: async (ctx, { requestId }) => {
+    const pending = await ctx.runMutation(internal.telegram.prepareTokenLaunchAnnouncements, { requestId });
+    let retryAttempt = 0;
+    for (const announcement of pending) {
+      const attempts = announcement.attempts + 1;
+      const url = `https://potato.fm/token/${announcement.tokenAddress}`;
+      const text = `a new root has broken the surface.\n\n<b>${htmlEscape(announcement.tokenName)} ($${htmlEscape(announcement.tokenSymbol)})</b> was planted through PotatoPad.\n\nca: <a href="${url}">${announcement.tokenAddress}</a>`;
+      try {
+        const result = await telegramRequest("sendMessage", {
+          chat_id: announcement.chatId,
+          text,
+          parse_mode: "HTML",
+          link_preview_options: { is_disabled: true },
+        }) as { message_id?: number };
+        await ctx.runMutation(internal.telegram.markTokenLaunchAnnouncement, {
+          announcementId: announcement.announcementId, status: "posted", attempts,
+          ...(result?.message_id ? { messageId: String(result.message_id) } : {}),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Telegram launch announcement failed";
+        console.error("telegram_launch_announcement_failed", { requestId, chatId: announcement.chatId, attempts, message });
+        await ctx.runMutation(internal.telegram.markTokenLaunchAnnouncement, {
+          announcementId: announcement.announcementId, status: "failed", attempts, error: message.slice(0, 300),
+        });
+        retryAttempt = Math.max(retryAttempt, attempts);
+      }
+    }
+    if (retryAttempt > 0 && retryAttempt < 5) {
+      const delay = Math.min(15 * 60_000, 60_000 * 2 ** (retryAttempt - 1));
+      await ctx.scheduler.runAfter(delay, internal.telegram.announceTokenLaunch, { requestId });
+    }
+  },
+});
+
 async function generateReply(context: PotatoContext, message: string, conversationHistory: string, repliedBotMessage?: string) {
-  const prompt = fill(TERMINAL_PROMPT, {
+  const prompt = `${fill(TERMINAL_PROMPT, {
     potatoName: context.name,
     internalPersonalityDescription: PERSONALITIES[context.name] || "",
     corruptionPercentage: context.corruption,
@@ -121,7 +206,7 @@ async function generateReply(context: PotatoContext, message: string, conversati
     recentWorks: context.recentWorks || "None available.",
     conversationHistory: conversationHistory || "No previous conversation is available.",
     userInput: "The latest Telegram message follows as the next user message.",
-  });
+  })}${walletFeaturePrompt()}`;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const recoveryAttempt = attempt > 1;

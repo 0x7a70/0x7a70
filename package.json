@@ -17,7 +17,7 @@
     "x:now": "node scripts/start-x.mjs --now",
     "x:authorize": "node scripts/authorize-x.mjs",
     "work:now": "node scripts/start-work.mjs",
-    "deploy": "convex deploy --cmd \"npm run build\""
+    "deploy": "npm run build"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.54.0",
@@ -43,6 +43,7 @@
     "vitest": "^3.2.4"
   },
   "overrides": {
+    "axios": "^1.18.0",
     "postcss": "^8.5.18",
     "sharp": "^0.35.0"
   }

@@ -94,3 +94,54 @@ export const recentWorks = query({
   handler: (ctx, { paginationOpts }) =>
     ctx.db.query("works").withIndex("by_created_at").order("desc").paginate(paginationOpts),
 });
+
+const publicLaunch = (launch: {
+  name: string; symbol: string; imageUri: string; description?: string;
+  website?: string; twitter?: string; telegram?: string; devBuyWei: string;
+  transactionHash: string; tokenAddress?: string; poolAddress?: string;
+  positionId?: string; devBuySucceeded?: boolean; createdAt: number; updatedAt: number;
+}, launcherUsername?: string) => ({
+  name: launch.name,
+  symbol: launch.symbol,
+  imageUri: launch.imageUri,
+  description: launch.description,
+  website: launch.website,
+  twitter: launch.twitter,
+  telegram: launch.telegram,
+  devBuyWei: launch.devBuyWei,
+  transactionHash: launch.transactionHash,
+  tokenAddress: launch.tokenAddress!,
+  poolAddress: launch.poolAddress,
+  positionId: launch.positionId,
+  devBuySucceeded: launch.devBuySucceeded,
+  createdAt: launch.createdAt,
+  updatedAt: launch.updatedAt,
+  launcherUsername,
+});
+
+export const listLaunches = query({
+  args: {},
+  handler: async (ctx) => {
+    const launches = (await ctx.db.query("tokenLaunches").collect())
+      .filter((launch) => Boolean(launch.tokenAddress && launch.patchEventCreatedAt))
+      .sort((left, right) => right.createdAt - left.createdAt);
+    return await Promise.all(launches.map(async (launch) => {
+      const user = await ctx.db.query("xReplyUsers").withIndex("by_x_user_id", (q) => q.eq("xUserId", launch.ownerXUserId)).unique();
+      return publicLaunch(launch, user?.username);
+    }));
+  },
+});
+
+export const getLaunch = query({
+  args: { tokenAddress: v.string() },
+  handler: async (ctx, { tokenAddress }) => {
+    const normalized = tokenAddress.toLowerCase();
+    if (!/^0x[a-f0-9]{40}$/.test(normalized)) return null;
+    const launch = (await ctx.db.query("tokenLaunches").collect()).find((candidate) =>
+      Boolean(candidate.patchEventCreatedAt && candidate.tokenAddress?.toLowerCase() === normalized),
+    );
+    if (!launch) return null;
+    const user = await ctx.db.query("xReplyUsers").withIndex("by_x_user_id", (q) => q.eq("xUserId", launch.ownerXUserId)).unique();
+    return publicLaunch(launch, user?.username);
+  },
+});

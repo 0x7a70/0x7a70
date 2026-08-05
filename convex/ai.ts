@@ -4,6 +4,7 @@ import { action, internalAction, internalMutation } from "./_generated/server";
 import { corruptionModifier, FALLBACK_LINES, randomDelay, randomInt, randomThoughtDelay } from "./data";
 import { PERSONALITIES, TERMINAL_PROMPT, THOUGHT_PROMPT, WORK_PROMPT } from "./generatedContent";
 import { WORK_KINDS } from "./workKinds";
+import { walletFeaturePrompt } from "./walletFeaturePrompt";
 
 type TerminalActionResult = {
   reply: string;
@@ -476,7 +477,7 @@ export const generateTerminalReply = action({
     );
     if (!potato) throw new Error("Unknown potato");
     const fallback: string = FALLBACK_LINES[potato.name.length % FALLBACK_LINES.length];
-    const systemPrompt = fill(TERMINAL_PROMPT, {
+    const systemPrompt = `${fill(TERMINAL_PROMPT, {
       potatoName: potato.name,
       internalPersonalityDescription: PERSONALITIES[potato.name] || "",
       corruptionPercentage: potato.corruption,
@@ -486,7 +487,7 @@ export const generateTerminalReply = action({
       recentWorks: potato.recentWorks || "None available.",
       conversationHistory: args.conversationHistory.slice(-14_000) || "No previous conversation.",
       userInput: "The latest visitor message follows as the next user message.",
-    });
+    })}${walletFeaturePrompt()}`;
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
         // Preserve the full-quality first attempt. If that route fails, use a

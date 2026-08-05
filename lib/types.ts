@@ -14,7 +14,7 @@ export type Hobby = {
   title: string;
 };
 
-export type EventType = "initialization" | "corruption" | "hobby_added" | "hobby_removed" | "thought" | "work_created";
+export type EventType = "initialization" | "corruption" | "hobby_added" | "hobby_removed" | "thought" | "work_created" | "token_launched";
 
 export type PatchEvent = {
   _id?: string;
@@ -27,6 +27,9 @@ export type PatchEvent = {
   hobbySlug?: string;
   workSlug?: string;
   workTitle?: string;
+  tokenAddress?: string;
+  tokenName?: string;
+  tokenSymbol?: string;
 };
 
 export type Work = {
@@ -46,6 +49,25 @@ export type Work = {
   telegramAscii: string;
   corruptionAtCreation: number;
   createdAt: number;
+};
+
+export type TokenLaunch = {
+  name: string;
+  symbol: string;
+  imageUri: string;
+  description?: string;
+  website?: string;
+  twitter?: string;
+  telegram?: string;
+  devBuyWei: string;
+  transactionHash: string;
+  tokenAddress: string;
+  poolAddress?: string;
+  positionId?: string;
+  devBuySucceeded?: boolean;
+  createdAt: number;
+  updatedAt: number;
+  launcherUsername?: string;
 };
 
 export type TerminalTurn = { role: "user" | "potato"; text: string };

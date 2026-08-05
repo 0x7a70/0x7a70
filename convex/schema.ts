@@ -24,6 +24,7 @@ export default defineSchema({
       v.literal("hobby_removed"),
       v.literal("thought"),
       v.literal("work_created"),
+      v.literal("token_launched"),
     ),
     potatoSlug: v.string(),
     potatoName: v.string(),
@@ -33,6 +34,9 @@ export default defineSchema({
     hobbySlug: v.optional(v.string()),
     workSlug: v.optional(v.string()),
     workTitle: v.optional(v.string()),
+    tokenAddress: v.optional(v.string()),
+    tokenName: v.optional(v.string()),
+    tokenSymbol: v.optional(v.string()),
   })
     .index("by_created_at", ["createdAt"])
     .index("by_potato_created_at", ["potatoSlug", "createdAt"]),
@@ -80,6 +84,8 @@ export default defineSchema({
     authorXUserId: v.string(),
     text: v.string(),
     mediaUrl: v.optional(v.string()),
+    recipientXUserId: v.optional(v.string()),
+    recipientAddress: v.optional(v.string()),
     status: v.union(
       v.literal("received"),
       v.literal("processing"),
@@ -90,6 +96,8 @@ export default defineSchema({
     commandKind: v.optional(v.string()),
     responsePostId: v.optional(v.string()),
     safeError: v.optional(v.string()),
+    retryCount: v.optional(v.number()),
+    nextRetryAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -100,6 +108,17 @@ export default defineSchema({
     key: v.string(),
     newestSeenPostId: v.optional(v.string()),
     lastPolledAt: v.optional(v.number()),
+    leaseUntil: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  xReplyRateLimits: defineTable({
+    key: v.string(),
+    utcDay: v.string(),
+    dailyCount: v.number(),
+    windowStartedAt: v.number(),
+    windowCount: v.number(),
+    lastAcceptedAt: v.number(),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
@@ -124,6 +143,7 @@ export default defineSchema({
     status: v.union(
       v.literal("accepted"),
       v.literal("simulating"),
+      v.literal("prepared"),
       v.literal("broadcast"),
       v.literal("confirmed"),
       v.literal("rejected"),
@@ -132,6 +152,8 @@ export default defineSchema({
     normalizedJson: v.string(),
     safeError: v.optional(v.string()),
     transactionHash: v.optional(v.string()),
+    reconciliationAttempts: v.optional(v.number()),
+    nextReconcileAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -147,7 +169,8 @@ export default defineSchema({
     valueWei: v.string(),
     callKind: v.string(),
     transactionHash: v.string(),
-    status: v.union(v.literal("broadcast"), v.literal("confirmed"), v.literal("reverted")),
+    signedTransaction: v.optional(v.string()),
+    status: v.union(v.literal("prepared"), v.literal("broadcast"), v.literal("confirmed"), v.literal("reverted")),
     blockNumber: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -173,6 +196,7 @@ export default defineSchema({
     poolAddress: v.optional(v.string()),
     positionId: v.optional(v.string()),
     devBuySucceeded: v.optional(v.boolean()),
+    patchEventCreatedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -264,6 +288,18 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_update_id", ["updateId"]),
+
+  telegramLaunchAnnouncements: defineTable({
+    requestId: v.string(),
+    chatId: v.string(),
+    tokenAddress: v.string(),
+    status: v.union(v.literal("pending"), v.literal("posted"), v.literal("failed")),
+    attempts: v.number(),
+    messageId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_request_chat", ["requestId", "chatId"]),
 
   telegramConversations: defineTable({
     key: v.string(),
