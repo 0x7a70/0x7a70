@@ -7,12 +7,34 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function errorResponse(error: unknown) {
-  if (error instanceof ZodError) return NextResponse.json({ error: "invalid signer request" }, { status: 400 });
-  const message = error instanceof Error ? error.message : "signer request failed";
-  const safe = /disabled|configured|limit|reserve|insufficient|invalid|unverified|unsupported|mismatch|simulation|revert|quote|receipt|claim/i.test(message)
-    ? message : "signer request failed";
-  console.error("wallet_signer_failed", { reason: safe });
-  return NextResponse.json({ error: safe }, { status: 400 });
+  if (error instanceof ZodError) {
+    console.error("wallet_signer_zod_error", error.issues);
+
+    return NextResponse.json(
+      {
+        error: "invalid signer request",
+        details: error.issues,
+      },
+      { status: 400 },
+    );
+  }
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error);
+
+  console.error("wallet_signer_failed", {
+    message,
+    name: error instanceof Error ? error.name : undefined,
+    stack: error instanceof Error ? error.stack : undefined,
+    cause: error instanceof Error ? error.cause : undefined,
+  });
+
+  return NextResponse.json(
+    { error: message },
+    { status: 400 },
+  );
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {

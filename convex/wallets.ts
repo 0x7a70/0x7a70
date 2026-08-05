@@ -54,13 +54,42 @@ function signerConfiguration() {
 
 async function signerRequest<T>(path: string, body: unknown): Promise<T> {
   const { baseUrl, token } = signerConfiguration();
+
   const response = await fetch(`${baseUrl}${path}`, {
     method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
     body: JSON.stringify(body),
   });
-  const payload = await response.json().catch(() => ({})) as T & { error?: string };
-  if (!response.ok) throw new Error(payload.error || `signer request failed (${response.status})`);
+
+  const raw = await response.text();
+
+  let payload: (T & { error?: string; message?: string }) | null = null;
+
+  try {
+    payload = raw
+      ? (JSON.parse(raw) as T & { error?: string; message?: string })
+      : null;
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.error ||
+        payload?.message ||
+        `signer request failed (${response.status}): ${raw || response.statusText}`,
+    );
+  }
+
+  if (!payload) {
+    throw new Error(
+      `signer returned invalid or empty JSON (${response.status}): ${raw}`,
+    );
+  }
+
   return payload;
 }
 
