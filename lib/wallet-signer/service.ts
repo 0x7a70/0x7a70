@@ -7,7 +7,7 @@ import {
 import {
   DEAD_ADDRESS, POTATOPAD_CURVE_ADDRESS, POTATOPAD_LOCKER_ADDRESS, ROBINHOOD_CHAIN_ID, ROBINHOOD_RPC_URL,
   MAX_LAUNCH_DEV_BUY_WEI, POTATOPAD_POOL_FEE, ROBINHOOD_WETH_ADDRESS, UNISWAP_V3_QUOTER_ADDRESS, UNISWAP_V3_ROUTER_ADDRESS,
-  accountName, resolveTokenAddress, type BroadcastRequest, type ExecutionRequest, type TransactionStatusRequest,
+  X7A70_TOKEN_ADDRESS, accountName, resolveTokenAddress, type BroadcastRequest, type ExecutionRequest, type TransactionStatusRequest,
 } from "./policy";
 
 const chain = defineChain({
@@ -178,7 +178,8 @@ async function tokenAmount(owner: Address, token: Address, amount: string, unit:
   return balance * scaledPercent / 1_000_000n;
 }
 
-export async function walletBalance(address: Address, token: string) {
+export async function walletBalance(address: Address, token?: string) {
+  if (!token) return walletPortfolio(address);
   if (/^eth$/i.test(token)) return { display: `${formatEther(await publicClient.getBalance({ address }))} ETH` };
   const tokenAddress = await resolveHeldTokenAddress(address, token);
   const [raw, decimals, symbol] = await Promise.all([
@@ -191,8 +192,58 @@ export async function walletBalance(address: Address, token: string) {
 
 type BlockscoutTokenBalance = {
   value?: string;
-  token?: { symbol?: string; type?: string; address_hash?: string };
+  token?: { symbol?: string; type?: string; address_hash?: string; decimals?: string | number };
 };
+
+function compactUnits(value: bigint, decimals: number) {
+  const [whole, fraction = ""] = formatUnits(value, decimals).split(".");
+  const compactFraction = fraction.slice(0, 6).replace(/0+$/, "");
+  return compactFraction ? `${whole}.${compactFraction}` : whole;
+}
+
+async function walletPortfolio(owner: Address) {
+  const [nativeBalance, response, x7a70Balance, x7a70Decimals, x7a70Symbol] = await Promise.all([
+    publicClient.getBalance({ address: owner }),
+    fetch(`${ROBINHOOD_BLOCKSCOUT_API}/addresses/${owner}/token-balances`, {
+      signal: AbortSignal.timeout(8_000), cache: "no-store",
+    }),
+    publicClient.readContract({ address: X7A70_TOKEN_ADDRESS as Address, abi: erc20Abi, functionName: "balanceOf", args: [owner] }),
+    publicClient.readContract({ address: X7A70_TOKEN_ADDRESS as Address, abi: erc20Abi, functionName: "decimals" }),
+    publicClient.readContract({ address: X7A70_TOKEN_ADDRESS as Address, abi: erc20Abi, functionName: "symbol" }),
+  ]);
+  if (!response.ok) throw new Error("token balance lookup is unavailable");
+  const payload = await response.json() as BlockscoutTokenBalance[];
+  if (!Array.isArray(payload)) throw new Error("token balance lookup returned invalid data");
+
+  const entries = new Map<string, { symbol: string; display: string }>();
+  for (const entry of payload) {
+    const tokenAddress = entry.token?.address_hash?.toLowerCase();
+    const symbol = entry.token?.symbol?.trim();
+    const decimals = Number(entry.token?.decimals);
+    if (entry.token?.type !== "ERC-20" || !tokenAddress || !/^0x[a-fA-F0-9]{40}$/.test(tokenAddress)
+      || !symbol || !/^\d+$/.test(entry.value || "") || BigInt(entry.value || "0") <= 0n
+      || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) continue;
+    entries.set(tokenAddress, { symbol, display: `${compactUnits(BigInt(entry.value!), decimals)} ${symbol}` });
+  }
+  if (x7a70Balance > 0n) {
+    entries.set(X7A70_TOKEN_ADDRESS.toLowerCase(), {
+      symbol: x7a70Symbol,
+      display: `${compactUnits(x7a70Balance, x7a70Decimals)} ${x7a70Symbol}`,
+    });
+  }
+
+  const allLines = [...entries.values()]
+    .sort((left, right) => left.symbol.localeCompare(right.symbol))
+    .map((entry) => entry.display);
+  if (nativeBalance > 0n) allLines.unshift(`${compactUnits(nativeBalance, 18)} ETH`);
+  const lines: string[] = [];
+  for (const line of allLines) {
+    if (`Balances:\n${[...lines, line].join("\n")}`.length > 230) break;
+    lines.push(line);
+  }
+  if (lines.length < allLines.length) lines.push(`+${allLines.length - lines.length} more nonzero balance${allLines.length - lines.length === 1 ? "" : "s"}.`);
+  return { display: lines.length ? `Balances:\n${lines.join("\n")}` : "No nonzero balances found." };
+}
 
 async function resolveHeldTokenAddress(owner: Address, identifier: string) {
   if (/^0x[a-fA-F0-9]{40}$/.test(identifier) || /^\$?0x7a70$/i.test(identifier)) {

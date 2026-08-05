@@ -562,9 +562,9 @@ export const executeCommand = internalAction({
         const balance = await signerRequest<{ display: string }>("/v1/wallets/balance", {
           chainId: ROBINHOOD_CHAIN_ID, walletRef: wallet.signerWalletRef,
           expectedAddress: wallet.address, ownerReference: `x:${args.xUserId}`,
-          token: command.token || "ETH",
+          ...(command.token ? { token: command.token } : {}),
         });
-        return { ok: true, message: `${command.token || "eth"} balance: ${balance.display}` };
+        return { ok: true, message: command.token ? `${command.token} balance: ${balance.display}` : balance.display };
       } catch (error) {
         return { ok: false, message: safeFailure(error) };
       }

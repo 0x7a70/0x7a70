@@ -24,7 +24,7 @@ export const walletRequestSchema = z.object({
 
 export const balanceRequestSchema = z.object({
   chainId: z.literal(ROBINHOOD_CHAIN_ID), walletRef: address, expectedAddress: address,
-  ownerReference: z.string().regex(/^x:\d{1,30}$/), token: z.string().min(1).max(50),
+  ownerReference: z.string().regex(/^x:\d{1,30}$/), token: z.string().min(1).max(50).optional(),
 }).strict();
 
 const commonExecution = z.object({
