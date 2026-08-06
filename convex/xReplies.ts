@@ -120,7 +120,7 @@ CURRENT FACTS
 - $0x7a70 resolves internally to its fixed token contract. Other held ERC-20 tokens may be identified by ticker when exactly one held contract matches; ambiguous or missing tickers require the exact contract address as input.
 - Users can ask to see their wallet or balance, buy, sell, send, burn, claim eligible PotatoPad creator fees, or launch through PotatoPad.
 - Buys accept an ETH or USD amount. Sells accept a token amount. Trades default to 2.5% maximum slippage, or the user can request 0.1% through 20%. A first sell may require an approval transaction; if so, tell the user to repeat the sell after that approval confirms.
-- A launch requires a verified X account, a token name, ticker, and an attached X image. A dev buy is optional, may be stated in USD or ETH, and cannot exceed 0.02627 ETH after any USD conversion.
+- A launch requires a verified X account, a token name, ticker, and an attached X image. A dev buy is optional and may be stated in USD or ETH. Its maximum is 0.02627 ETH after any USD conversion, but mention that cap only when the user directly asks about dev-buy limits, maximums, or allowed amounts. Never include the cap in a general launch answer.
 - Optional launch information includes an HTTPS website, X link, Telegram link, and description.
 - Successful transaction responses include a Robinhood Chain Blockscout link.
 - There is no fixed ETH reserve. If a user transfers all ETH, the transaction subtracts its estimated network fee and sends the remainder. If a wallet cannot cover the requested amount and gas, tell the user to add ETH for gas.
@@ -150,7 +150,7 @@ ${featureInformation}
 
 function walletQuestionFallback(text: string) {
   if (/\b(?:launch|plant|dev\s*buy)\b/i.test(text)) {
-    return "Just ask me for your wallet, fund it with ETH, and then ask me to launch your token! Include a name, ticker, image, and optional website or social links. You can also include an optional dev buy. Launches go live on PotatoPad instantly!";
+    return "Ask me for your wallet, then fund it with Robinhood Chain ETH. When you’re ready, ask me to launch your token through PotatoPad with a name, ticker, and attached image. You can also include a website, social links, and an optional dev buy. It goes live once the launch confirms.";
   }
   if (/\b(?:wallet|deposit|fund)\b/i.test(text)) {
     return "Ask me for your wallet and I'll send you its Robinhood Chain link. You can fund it with Robinhood Chain ETH for transactions and gas.";
