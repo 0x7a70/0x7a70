@@ -94,10 +94,7 @@ async function publishReply(text: string, sourcePostId: string) {
 
 async function generateWalletInformationReply(directReplyText: string) {
   const featureInformation = walletFeaturePrompt();
-  if (!featureInformation) return "wallet and PotatoPad launch commands are not publicly available yet.";
-  const availability = process.env.X_CRYPTO_EXECUTION_ENABLED === "true"
-    ? "Wallet execution is currently enabled."
-    : "Wallet execution is not currently live.";
+  if (!featureInformation) return "That feature isn't available yet.";
   const facts = `
 You are 0x7a70 answering one direct X post. Give a friendly, practical answer in
 one to three short sentences. Answer the question immediately in everyday
@@ -114,10 +111,8 @@ internals, receipt verification, or numeric account identifiers. Always call the
 launch platform "PotatoPad" and nothing else.
 
 CURRENT FACTS
-- ${availability}
 - A user can ask 0x7a70 for their wallet. Their first interaction creates it if needed, and later requests return the same wallet even if their X username changes.
 - A user can send to an X handle. If the recipient does not yet have a wallet, one is created for them, and it is the same wallet they can use when they later interact with 0x7a70.
-- The application controls transaction signing on the user's behalf. Never claim that nobody else can access or operate the wallet cryptographically.
 - The wallet address can receive Robinhood Chain ETH and compatible ERC-20 tokens. ETH pays network gas.
 - ETH and token transfers can be sent to a wallet address or an X handle.
 - Burns can use a token quantity or a USD amount such as "$25 of TOKEN". A USD amount is an execution-time estimate, not a guaranteed market value.
@@ -146,11 +141,26 @@ ${featureInformation}
       providerSort: "latency",
       temperature: 0.35,
     }), 65);
-    return reply || "Ask about a specific wallet or launch step and I will explain what the patch currently supports.";
+    return reply || walletQuestionFallback(directReplyText);
   } catch (error) {
     console.error("x_wallet_information_generation_failed", { message: error instanceof Error ? error.message : "unknown" });
-    return `Wallets use Robinhood Chain ETH for gas, and PotatoPad launches require a verified X account, a name, ticker, and attached image. ${availability}`;
+    return walletQuestionFallback(directReplyText);
   }
+}
+
+function walletQuestionFallback(text: string) {
+  if (/\b(?:launch|plant|dev\s*buy)\b/i.test(text)) {
+    return "Just ask me for your wallet, fund it with ETH, and then ask me to launch your token! Include a name, ticker, image, and optional website or social links. You can also include an optional dev buy. Launches go live on PotatoPad instantly!";
+  }
+  if (/\b(?:wallet|deposit|fund)\b/i.test(text)) {
+    return "Ask me for your wallet and I'll send you its Robinhood Chain link. You can fund it with Robinhood Chain ETH for transactions and gas.";
+  }
+  if (/\bbalance\b/i.test(text)) return "Ask for your balance and I'll show your nonzero ETH and token balances. You can also ask for one specific token.";
+  if (/\b(?:send|transfer)\b/i.test(text)) return "Tell me the amount, token or ETH, and the destination wallet or X handle. For example: send 25 ROOT to @user.";
+  if (/\bburn\b/i.test(text)) return "Say burn, the amount, and the token. You can use a token amount, a USD amount, half, all, or a percentage.";
+  if (/\b(?:buy|sell|swap|slippage)\b/i.test(text)) return "Tell me what you'd like to buy or sell and the amount. Trades use 2.5% slippage unless you choose another value.";
+  if (/\bclaim\b.*\bfees?\b/i.test(text)) return "Ask me to claim fees for a token you launched through PotatoPad. Include its ticker or token link if you have more than one.";
+  return "Tell me what you'd like to do, such as checking your wallet, sending tokens, trading, or launching through PotatoPad, and I'll walk you through it.";
 }
 
 type GeneralReplyContext = { name: string; corruption: number; hobbySlugs: string[] };
