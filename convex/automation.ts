@@ -88,7 +88,7 @@ export const changeCorruption = internalMutation({
       delta,
       createdAt: Date.now(),
     });
-    const delay = randomDelay(8, 12);
+    const delay = randomDelay(32, 48);
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextCorruptionAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.automation.changeCorruption);
@@ -165,7 +165,7 @@ export const changeHobby = internalMutation({
         createdAt: Date.now(),
       });
     }
-    const delay = randomDelay(15, 20);
+    const delay = randomDelay(60, 80);
     const state = await ctx.db.query("automationState").withIndex("by_key", (q) => q.eq("key", "main")).unique();
     if (state) await ctx.db.patch(state._id, { nextHobbyAt: Date.now() + delay });
     await ctx.scheduler.runAfter(delay, internal.automation.changeHobby);

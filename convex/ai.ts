@@ -29,8 +29,8 @@ type ChatMessage = {
 type ReasoningEffort = "low" | "medium" | "high";
 const THOUGHT_MAX_ATTEMPTS = 10;
 const WORK_MAX_ATTEMPTS = 10;
-const WORK_MINUTES = 180;
-const WORK_MAX_MINUTES = 210;
+const WORK_MINUTES = 720;
+const WORK_MAX_MINUTES = 840;
 
 type OpenRouterPayload = {
   error?: { code?: number; message?: string; metadata?: { error_type?: string } };

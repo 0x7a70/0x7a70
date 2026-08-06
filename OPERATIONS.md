@@ -16,8 +16,8 @@ secrets. Never commit them.
 Deploy the application and Convex functions, then invoke
 `seed:initialize` once with the production `CONVEX_SERVER_SECRET`. The
 operation is idempotent: subsequent invocations report that initialization
-already occurred. It creates all potatoes and hobbies and schedules the three
-independent loops.
+already occurred. It creates all potatoes and hobbies and schedules the
+independent automation loops.
 
 ## Automation recovery
 
@@ -41,8 +41,8 @@ and 100 messages per hashed visitor/session per UTC day. Terminal generation
 makes up to two attempts before returning its fallback. Interactive requests
 use high reasoning with a moderated private token allowance and
 throughput-prioritized provider routing; scheduled thoughts retain the larger
-high-reasoning allowance. Automated thoughts use
-a newly randomized interval of four to eight minutes after every run. Each run
+high-reasoning allowance. Automated website thoughts use
+a newly randomized interval of 80 to 120 minutes after every run. Each run
 durably schedules its successor before contacting the AI provider, so a failed
 or invalid generation skips only that thought and does not stop the loop. A
 thought may make up to ten generation attempts with a short capped backoff;
@@ -76,8 +76,14 @@ old pending updates, and prints the exact `TELEGRAM_BOT_USERNAME` value to set
 in Convex. Keep group privacy mode enabled in BotFather. Add the bot to the
 group and mention it once; the group is registered automatically with thought
 transmissions enabled. A dedicated 0x7a70 thought is then generated and sent
-every 45-60 minutes. The next execution is durably scheduled before generation,
+every 180-240 minutes. Stickers use the same interval with at least 60 minutes
+of separation from thoughts. The next execution is durably scheduled before generation,
 so a failed AI or Telegram request does not stop the loop.
+
+Current autonomous intervals are: corruption changes every 32-48 minutes,
+hobby changes every 60-80 minutes, website thoughts every 80-120 minutes,
+works every 720-840 minutes, scheduled X posts every 960-1020 minutes, and
+Telegram thoughts and stickers every 180-240 minutes each.
 
 To stop group thoughts without removing the bot, set `thoughtsEnabled` to
 `false` for that chat in the `telegramChats` table. Removing the bot also
