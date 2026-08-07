@@ -150,11 +150,11 @@ ${featureInformation}
 
 function walletQuestionFallback(text: string) {
   if (/\b(?:launch|plant|dev\s*buy)\b/i.test(text)) {
-    return "Ask me for your wallet, then fund it with Robinhood Chain ETH. When you’re ready, ask me to launch your token through PotatoPad with a name, ticker, and attached image. You can also include a website, social links, and an optional dev buy. It goes live once the launch confirms.";
+    return "Ask me for your wallet, then fund it with ETH. Give me the token name, ticker, and attached image. You can also include a website, social links, and an dev buy. It goes live on PotatoPad instantly."
   }
   if (/\b(?:wallet|deposit|fund)\b/i.test(text)) {
-    return "Ask me for your wallet and I'll send you its Robinhood Chain link. You can fund it with Robinhood Chain ETH for transactions and gas.";
-  }
+    return "Ask me for your wallet, then fund it with ETH. Give me the token name, ticker, and attached image. You can also include a website, social links, and an dev buy. It goes live on PotatoPad instantly."
+ }
   if (/\bbalance\b/i.test(text)) return "Ask for your balance and I'll show your nonzero ETH and token balances. You can also ask for one specific token.";
   if (/\b(?:send|transfer)\b/i.test(text)) return "Tell me the amount, token or ETH, and the destination wallet or X handle. For example: send 25 ROOT to @user.";
   if (/\bburn\b/i.test(text)) return "Say burn, the amount, and the token. You can use a token amount, a USD amount, half, all, or a percentage.";
