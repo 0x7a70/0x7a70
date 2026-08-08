@@ -53,6 +53,24 @@ describe("X wallet commands", () => {
     });
   });
 
+  it("parses flexibly arranged launch names and tickers", () => {
+    expect(parseWalletCommand("hey, please plant $SEED, the name is Potato Seed; thanks")).toMatchObject({
+      kind: "launch", name: "Potato Seed", symbol: "SEED",
+    });
+    expect(parseWalletCommand("deploy Potato Seed (SEED)")).toMatchObject({
+      kind: "launch", name: "Potato Seed", symbol: "SEED",
+    });
+    expect(parseWalletCommand("token name: Potato Seed / symbol: $SEED / please launch it")).toMatchObject({
+      kind: "launch", name: "Potato Seed", symbol: "SEED",
+    });
+    expect(parseWalletCommand("launch Potato Seed with SEED as the ticker")).toMatchObject({
+      kind: "launch", name: "Potato Seed", symbol: "SEED",
+    });
+    expect(parseWalletCommand("create a coin, ticker=$SEED; call it Potato Seed")).toMatchObject({
+      kind: "launch", name: "Potato Seed", symbol: "SEED",
+    });
+  });
+
   it("accepts USD and ETH sends", () => {
     const recipient = "0x1111111111111111111111111111111111111111";
     expect(parseWalletCommand(`send $12 of eth to ${recipient}`)).toMatchObject({ kind: "send", amount: "12", unit: "usd", recipient });

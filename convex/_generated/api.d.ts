@@ -24,6 +24,7 @@ import type * as workKinds from "../workKinds.js";
 import type * as x from "../x.js";
 import type * as xReplies from "../xReplies.js";
 import type * as xReplyPolicy from "../xReplyPolicy.js";
+import type * as xWalletIntent from "../xWalletIntent.js";
 
 import type {
   ApiFromModules,
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   x: typeof x;
   xReplies: typeof xReplies;
   xReplyPolicy: typeof xReplyPolicy;
+  xWalletIntent: typeof xWalletIntent;
 }>;
 
 /**
