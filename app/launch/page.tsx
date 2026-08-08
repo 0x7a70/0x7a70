@@ -32,7 +32,7 @@ export default function LaunchPage() {
               <li><strong>ask for your wallet.</strong><span>mention @0x7a70 directly on x and ask for your wallet address. this creates or retrieves the robinhood chain wallet linked to your x account.</span></li>
               <li><strong>fund the root.</strong><span>send robinhood chain eth to the address 0x7a70 gives you. eth is needed for network gas and any optional dev buy. do not send it on another network.</span></li>
               <li><strong>call the potato.</strong><span>mention @0x7a70 again and clearly ask it to launch or plant a token.</span></li>
-              <li><strong>name the seed.</strong><span>include a token name and ticker. attach the image you want the token to use.</span></li>
+              <li><strong>name the seed.</strong><span>include a token name and ticker. an image is optional, and any image you attach will be used.</span></li>
               <li><strong>choose the first watering.</strong><span>a dev buy is optional. state the amount in usd or robinhood chain eth if you want one.</span></li>
               <li><strong>wait for the root receipt.</strong><span>after a successful launch, the bot replies with the contract address and a transaction link.</span></li>
             </ol>

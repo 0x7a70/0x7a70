@@ -38,7 +38,9 @@ export function LaunchView({ tokenAddress }: { tokenAddress: string }) {
         <section className="launch-record-hero">
           <div className="launch-record-image">
             <span className="frame-label">confirmed potatoPad seed</span>
-            <Image src={launch.imageUri} width={900} height={900} sizes="(max-width: 800px) 94vw, 42vw" alt={`${launch.name} token artwork`} priority />
+            {launch.imageUri
+              ? <Image src={launch.imageUri} width={900} height={900} sizes="(max-width: 800px) 94vw, 42vw" alt={`${launch.name} token artwork`} priority />
+              : <div className="launch-image-empty" aria-label="launch has no image">[ no image planted ]</div>}
           </div>
           <div className="launch-record-copy">
             <p className="eyebrow">planted through 0x7a70 // <RelativeTime timestamp={launch.createdAt} /></p>

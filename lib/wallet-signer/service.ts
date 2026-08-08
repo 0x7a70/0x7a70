@@ -456,7 +456,7 @@ async function buildCall(request: ExecutionRequest, price: number) {
     };
   }
   if (op.padAddress.toLowerCase() !== POTATOPAD_CURVE_ADDRESS.toLowerCase()) throw new Error("unverified PotatoPad contract");
-  if (op.imageUri !== op.meta.imageURI || new URL(op.imageUri).hostname.toLowerCase() !== "pbs.twimg.com") throw new Error("invalid launch image");
+  if (op.imageUri !== op.meta.imageURI || (op.imageUri && new URL(op.imageUri).hostname.toLowerCase() !== "pbs.twimg.com")) throw new Error("invalid launch image");
   const value = !op.devBuy ? 0n : op.devBuy.unit === "usd" ? usdToWei(op.devBuy.amount, price) : parseEther(op.devBuy.amount);
   if (value > MAX_LAUNCH_DEV_BUY_WEI) throw new Error("initial dev buy exceeds the 0.02627 ETH maximum");
   const vanity = await findVanitySalt(request.idempotencyKey, request.expectedFrom as Address, op.name, op.symbol);
@@ -473,7 +473,49 @@ export async function executeTransaction(request: ExecutionRequest) {
   if (!Number.isFinite(maxUsd) || maxUsd <= 0) throw new Error("maximum transaction value is not configured");
   const account = await accountFor(request.walletRef, request.expectedFrom, request.ownerReference);
   const price = await ethUsd();
-  let call = await buildCall(request, price);
+  let call;
+  try {
+    call = await buildCall(request, price);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (request.operation.type !== "uniswap_v3_sell" || !/sell approval required/i.test(message)) throw error;
+
+    // A sell may require a separate ERC-20 approval transaction. Complete it
+    // inside the same bot request, wait for confirmation, then prepare the sell.
+    const token = await resolveHeldTokenAddress(account.address, request.operation.token);
+    const decimals = await publicClient.readContract({ address: token, abi: erc20Abi, functionName: "decimals" });
+    const amount = await tokenAmount(account.address, token, request.operation.amount, request.operation.unit, decimals);
+    const approvalCall = {
+      to: token,
+      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [UNISWAP_V3_ROUTER_ADDRESS as Address, amount] }),
+      value: 0n,
+    };
+    const approvalFees = await publicClient.estimateFeesPerGas();
+    if (!approvalFees.maxFeePerGas || approvalFees.maxFeePerGas <= 0n) throw new Error("fee estimate unavailable");
+    const approvalGas = await publicClient.estimateGas({ account: account.address, ...approvalCall });
+    const approvalBalance = await publicClient.getBalance({ address: account.address });
+    if (approvalBalance < approvalGas * 125n / 100n * approvalFees.maxFeePerGas) throw new Error("insufficient ETH for gas");
+    await publicClient.call({ account: account.address, ...approvalCall });
+    const approvalNonce = await publicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
+    const approvalUnsigned = serializeTransaction({
+      chainId: ROBINHOOD_CHAIN_ID, type: "eip1559", nonce: approvalNonce,
+      gas: approvalGas * 125n / 100n, maxFeePerGas: approvalFees.maxFeePerGas,
+      maxPriorityFeePerGas: approvalFees.maxPriorityFeePerGas ?? 0n, ...approvalCall,
+    });
+    const approvalSigned = await cdpClient().evm.signTransaction({
+      address: account.address, transaction: approvalUnsigned, idempotencyKey: `${request.idempotencyKey}:approval`,
+    });
+    const approvalHash = keccak256(approvalSigned.signature);
+    try {
+      await publicClient.sendRawTransaction({ serializedTransaction: approvalSigned.signature });
+    } catch (broadcastError) {
+      const broadcastMessage = broadcastError instanceof Error ? broadcastError.message : "";
+      if (!/already known|known transaction|nonce too low/i.test(broadcastMessage)) throw broadcastError;
+    }
+    const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash, confirmations: 1, timeout: 45_000 });
+    if (approvalReceipt.status !== "success") throw new Error("sell approval transaction reverted");
+    call = await buildCall(request, price);
+  }
   const fees = await publicClient.estimateFeesPerGas();
   const { maxFeePerGas, maxPriorityFeePerGas } = fees;
   if (maxFeePerGas === undefined || maxFeePerGas <= 0n) throw new Error("fee estimate unavailable");

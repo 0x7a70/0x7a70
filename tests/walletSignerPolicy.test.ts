@@ -83,4 +83,24 @@ describe("wallet signer policy", () => {
     expect(executionRequestSchema.parse({ ...common, operation }).operation.type).toBe("potatopad_creator_fee_claim");
     expect(() => executionRequestSchema.parse({ ...common, operation: { ...operation, lockerAddress: "0x2222222222222222222222222222222222222222" } })).toThrow();
   });
+
+  it("accepts launches without an image while retaining attached image URLs", () => {
+    const common = {
+      idempotencyKey: "x:123:launch:1", chainId: 4663 as const, ownerReference: "x:123",
+      walletRef: "0x1111111111111111111111111111111111111111", expectedFrom: "0x1111111111111111111111111111111111111111",
+      requireSimulation: true as const,
+    };
+    const operation = {
+      type: "potatopad_launch" as const, launchMode: "curve" as const,
+      padAddress: "0xbE2aCD9044516399aa4C697c299571664fBe9d4B", name: "Potato Seed", symbol: "SEED",
+      imageUri: "", description: "", devBuy: null,
+      meta: { imageURI: "", website: "", twitter: "", telegram: "" }, method: "createToken" as const,
+      signature: "createToken(string,string,(string,string,string,string),bytes32)" as const,
+      valueSource: "dev_buy" as const, saltSource: "deterministic_0x7a70_vanity_search" as const,
+      requireTokenCreatedEvent: true as const, requireCurveOpenedEvent: true as const,
+      requireDevBuyEventWhenFunded: true as const, maxWalletBps: 200 as const,
+    };
+    expect(executionRequestSchema.parse({ ...common, operation }).operation.type).toBe("potatopad_launch");
+    expect(executionRequestSchema.parse({ ...common, operation: { ...operation, imageUri: "https://pbs.twimg.com/media/test.png", meta: { ...operation.meta, imageURI: "https://pbs.twimg.com/media/test.png" } } }).operation.type).toBe("potatopad_launch");
+  });
 });

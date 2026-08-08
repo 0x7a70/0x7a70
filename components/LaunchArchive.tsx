@@ -38,7 +38,9 @@ export function LaunchArchive() {
             return (
             <article className="launch-card" key={launch.tokenAddress}>
               <Link className="launch-card-image" href={`/launches/${launch.tokenAddress}`} aria-label={`view ${launch.name}`}>
-                <Image src={launch.imageUri} width={600} height={600} sizes="(max-width: 700px) 90vw, 28vw" alt={`${launch.name} token artwork`} />
+                {launch.imageUri
+                  ? <Image src={launch.imageUri} width={600} height={600} sizes="(max-width: 700px) 90vw, 28vw" alt={`${launch.name} token artwork`} />
+                  : <span className="launch-image-empty">[ no image planted ]</span>}
               </Link>
               <div className="launch-card-copy">
                 <p className="launch-card-time"><RelativeTime timestamp={launch.createdAt} /></p>

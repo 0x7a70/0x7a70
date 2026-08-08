@@ -58,8 +58,8 @@ const operationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("potatopad_launch"), launchMode: z.literal("curve"), padAddress: address,
     name: z.string().min(1).max(48), symbol: z.string().regex(/^[A-Z0-9]{1,12}$/),
-    imageUri: z.string().url().max(2048), description: z.string().max(280), devBuy: amount.nullable(),
-    meta: z.object({ imageURI: z.string().url().max(2048), website: z.string().max(2048), twitter: z.string().max(2048), telegram: z.string().max(2048) }).strict(),
+    imageUri: z.union([z.literal(""), z.string().url().max(2048)]), description: z.string().max(280), devBuy: amount.nullable(),
+    meta: z.object({ imageURI: z.union([z.literal(""), z.string().url().max(2048)]), website: z.string().max(2048), twitter: z.string().max(2048), telegram: z.string().max(2048) }).strict(),
     method: z.literal("createToken"), signature: z.literal("createToken(string,string,(string,string,string,string),bytes32)"),
     valueSource: z.literal("dev_buy"), saltSource: z.literal("deterministic_0x7a70_vanity_search"),
     requireTokenCreatedEvent: z.literal(true), requireCurveOpenedEvent: z.literal(true),

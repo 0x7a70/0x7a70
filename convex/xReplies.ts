@@ -8,6 +8,7 @@ import { normalize, openRouter } from "./ai";
 import { corruptionModifier } from "./data";
 import { PERSONALITIES } from "./generatedContent";
 import { walletFeaturePrompt } from "./walletFeaturePrompt";
+import { parseXWalletIntent, unknownWalletMessage, walletHelpMessage } from "./xWalletIntent";
 
 const X_API = "https://api.x.com/2";
 const X_MENTION_PAGE_SIZE = 100;
@@ -32,6 +33,13 @@ function replyLimits() {
     windowMs: positiveInteger("X_REPLY_WINDOW_MINUTES", 10, 60) * 60_000,
     cooldownMs: positiveInteger("X_REPLY_COOLDOWN_SECONDS", 30, 3_600) * 1_000,
   };
+}
+
+function rateLimitMessage(reason: string) {
+  if (reason === "user cooldown") return "Please wait briefly before sending another wallet request.";
+  if (reason === "user daily limit") return "You've reached today's wallet request limit. It resets at 00:00 UTC.";
+  if (reason === "user burst limit") return "You've sent several wallet requests quickly. Please wait a few minutes and try again.";
+  return "The bot is handling a lot of wallet requests right now. Please try again shortly.";
 }
 
 function oauthEncode(value: string) {
@@ -120,7 +128,7 @@ CURRENT FACTS
 - $0x7a70 resolves internally to its fixed token contract. Other held ERC-20 tokens may be identified by ticker when exactly one held contract matches; ambiguous or missing tickers require the exact contract address as input.
 - Users can ask to see their wallet or balance, buy, sell, send, burn, claim eligible PotatoPad creator fees, or launch through PotatoPad.
 - Buys accept an ETH or USD amount. Sells accept a token amount. Trades default to 2.5% maximum slippage, or the user can request 0.1% through 20%. A first sell may require an approval transaction; if so, tell the user to repeat the sell after that approval confirms.
-- A launch requires a verified X account, a token name, ticker, and an attached X image. A dev buy is optional and may be stated in USD or ETH. Its maximum is 0.02627 ETH after any USD conversion, but mention that cap only when the user directly asks about dev-buy limits, maximums, or allowed amounts. Never include the cap in a general launch answer.
+- A launch requires a verified X account, a token name, and ticker. An attached X image is optional and is used whenever present. A dev buy is optional and may be stated in USD or ETH. Its maximum is 0.02627 ETH after any USD conversion, but mention that cap only when the user directly asks about dev-buy limits, maximums, or allowed amounts. Never include the cap in a general launch answer.
 - Optional launch information includes an HTTPS website, X link, Telegram link, and description.
 - Successful transaction responses include a Robinhood Chain Blockscout link.
 - There is no fixed ETH reserve. If a user transfers all ETH, the transaction subtracts its estimated network fee and sends the remainder. If a wallet cannot cover the requested amount and gas, tell the user to add ETH for gas.
@@ -150,13 +158,13 @@ ${featureInformation}
 
 function walletQuestionFallback(text: string) {
   if (/\b(?:launch|plant|dev\s*buy)\b/i.test(text)) {
-    return "Ask me for your wallet, then fund it with ETH. Give me the token name, ticker, and attached image. You can also include a website, social links, and an dev buy. It goes live on PotatoPad instantly."
+    return "Ask me for your wallet, then fund it with ETH. Give me the token name and ticker. An image, website, social links, and dev buy are optional. If you attach an image, I'll use it. It goes live on PotatoPad instantly."
   }
   if (/\b(?:wallet|deposit|fund)\b/i.test(text)) {
-    return "Ask me for your wallet, then fund it with ETH. Give me the token name, ticker, and attached image. You can also include a website, social links, and an dev buy. It goes live on PotatoPad instantly."
+    return "Ask me for your wallet, then fund it with ETH. Give me the token name and ticker. An image, website, social links, and dev buy are optional. If you attach an image, I'll use it. It goes live on PotatoPad instantly."
  }
   if (/\bbalance\b/i.test(text)) return "Ask for your balance and I'll show your nonzero ETH and token balances. You can also ask for one specific token.";
-  if (/\b(?:send|transfer)\b/i.test(text)) return "Tell me the amount, token or ETH, and the destination wallet or X handle. For example: send 25 ROOT to @user.";
+  if (/\b(?:send|transfer)\b/i.test(text)) return "Tell me the amount, token or ETH, and the destination wallet or X handle. For example: send 25 $0x7a70 to @user.";
   if (/\bburn\b/i.test(text)) return "Say burn, the amount, and the token. You can use a token amount, a USD amount, half, all, or a percentage.";
   if (/\b(?:buy|sell|swap|slippage)\b/i.test(text)) return "Tell me what you'd like to buy or sell and the amount. Trades use 2.5% slippage unless you choose another value.";
   if (/\bclaim\b.*\bfees?\b/i.test(text)) return "Ask me to claim fees for a token you launched through PotatoPad. Include its ticker or token link if you have more than one.";
@@ -378,30 +386,28 @@ export const retryInteraction = internalAction({
     }
     await ctx.runMutation(internal.xReplies.updateInteraction, { postId, status: "processing", commandKind: current.interaction.commandKind });
     try {
-      await ctx.runAction(internal.wallets.ensureWallet, { xUserId: current.user.xUserId });
+      const intent = await parseXWalletIntent(current.interaction.text, Boolean(current.interaction.mediaUrl));
+      if (intent.kind === "irrelevant") {
+        await ctx.runMutation(internal.xReplies.updateInteraction, { postId, status: "rejected", commandKind: "irrelevant", safeError: "not a wallet request" });
+        return;
+      }
       let reply: string;
       let ok = true;
-      if (isWalletFeatureQuestion(current.interaction.text)) {
-        reply = await generateWalletInformationReply(current.interaction.text);
-      } else {
-        const command = parseWalletCommand(current.interaction.text);
-        if (command.kind === "unknown") {
-          const context = await ctx.runQuery(internal.xReplies.getGeneralReplyContext, {});
-          reply = await generateGeneralReply(current.interaction.text, context || { name: "0x7a70", corruption: 0, hobbySlugs: [] });
-          await ctx.runMutation(internal.xReplies.updateInteraction, { postId, status: "processing", commandKind: "general" });
-        } else {
-          const parsed = parseWalletCommand(current.interaction.text);
-          const recipientAddress = parsed.kind === "send"
-            ? current.interaction.recipientAddress || await resolveXRecipient(ctx, postId, parsed.recipient)
-            : undefined;
-          const result = await ctx.runAction(internal.wallets.executeCommand, {
-            sourcePostId: postId, xUserId: current.user.xUserId, text: current.interaction.text,
-            ...(current.interaction.mediaUrl ? { mediaUrl: current.interaction.mediaUrl } : {}),
-            ...(recipientAddress ? { recipientAddress } : {}),
-          });
-          reply = result.message;
-          ok = result.ok;
-        }
+      if (intent.kind === "help") reply = walletHelpMessage(intent.topic);
+      else if (intent.kind === "unknown_wallet") { reply = unknownWalletMessage(); ok = false; }
+      else {
+        await ctx.runAction(internal.wallets.ensureWallet, { xUserId: current.user.xUserId });
+        const recipientAddress = intent.command.kind === "send"
+          ? current.interaction.recipientAddress || await resolveXRecipient(ctx, postId, intent.command.recipient)
+          : undefined;
+        const result = await ctx.runAction(internal.wallets.executeCommand, {
+          sourcePostId: postId, xUserId: current.user.xUserId, text: current.interaction.text,
+          parsedCommandJson: JSON.stringify(intent.command),
+          ...(current.interaction.mediaUrl ? { mediaUrl: current.interaction.mediaUrl } : {}),
+          ...(recipientAddress ? { recipientAddress } : {}),
+        });
+        reply = result.message;
+        ok = result.ok;
       }
       const responsePostId = await publishReply(reply, postId);
       await ctx.runMutation(internal.xReplies.updateInteraction, { postId, status: ok ? "completed" : "rejected", responsePostId, ...(!ok ? { safeError: reply } : {}) });
@@ -492,6 +498,13 @@ export const pollMentions = internalAction({
           postId: mention.id, authorXUserId: user.id, text: directText, ...(firstMedia?.url ? { mediaUrl: firstMedia.url } : {}),
         });
         if (!reserved) continue;
+        const intent = await parseXWalletIntent(directText, Boolean(firstMedia?.url));
+        if (intent.kind === "irrelevant") {
+          await ctx.runMutation(internal.xReplies.updateInteraction, {
+            postId: mention.id, status: "rejected", commandKind: "irrelevant", safeError: "not a wallet request",
+          });
+          continue;
+        }
         await ctx.runMutation(internal.wallets.upsertXUser, {
           xUserId: user.id, username: user.username, verified: Boolean(user.verified),
           ...(user.verified_type ? { verifiedType: user.verified_type } : {}),
@@ -506,36 +519,40 @@ export const pollMentions = internalAction({
         }
         const rate = await ctx.runMutation(internal.xReplies.consumeReplyLimit, { xUserId: user.id });
         if (!rate.allowed) {
+          const reply = rateLimitMessage(rate.reason);
+          const responsePostId = await publishReply(reply, mention.id);
           await ctx.runMutation(internal.xReplies.updateInteraction, {
-            postId: mention.id, status: "rejected", commandKind: "rate_limited", safeError: rate.reason,
+            postId: mention.id, status: "rejected", commandKind: "rate_limited", responsePostId, safeError: rate.reason,
           });
+          processed += 1;
           continue;
         }
-        await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "processing", commandKind: parseWalletCommand(directText).kind });
+        const intentKind = intent.kind === "command" ? intent.command.kind : intent.kind === "help" ? `help:${intent.topic}` : "unknown_wallet";
+        await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "processing", commandKind: intentKind });
         try {
-          if (isWalletFeatureQuestion(directText)) {
-            const reply = await generateWalletInformationReply(directText);
+          if (intent.kind === "help") {
+            const reply = walletHelpMessage(intent.topic);
             const responsePostId = await publishReply(reply, mention.id);
             await ctx.runMutation(internal.xReplies.updateInteraction, {
-              postId: mention.id, status: "completed", commandKind: "wallet_information", responsePostId,
+              postId: mention.id, status: "completed", commandKind: `help:${intent.topic}`, responsePostId,
             });
             processed += 1;
             continue;
           }
-          const command = parseWalletCommand(directText);
-          if (command.kind === "unknown") {
-            const context = await ctx.runQuery(internal.xReplies.getGeneralReplyContext, {});
-            const reply = await generateGeneralReply(directText, context || { name: "0x7a70", corruption: 0, hobbySlugs: [] });
+          if (intent.kind === "unknown_wallet") {
+            const reply = unknownWalletMessage();
             const responsePostId = await publishReply(reply, mention.id);
-            await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "completed", commandKind: "general", responsePostId });
+            await ctx.runMutation(internal.xReplies.updateInteraction, { postId: mention.id, status: "rejected", commandKind: "unknown_wallet", responsePostId, safeError: "wallet intent was ambiguous" });
             processed += 1;
             continue;
           }
+          const command = intent.command;
           const recipientAddress = command.kind === "send"
             ? await resolveXRecipient(ctx, mention.id, command.recipient)
             : undefined;
           const result = await ctx.runAction(internal.wallets.executeCommand, {
             sourcePostId: mention.id, xUserId: user.id, text: directText,
+            parsedCommandJson: JSON.stringify(command),
             ...(firstMedia?.url ? { mediaUrl: firstMedia.url } : {}),
             ...(recipientAddress ? { recipientAddress } : {}),
           });

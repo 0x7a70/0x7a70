@@ -208,3 +208,86 @@ export function parseWalletCommand(raw: string): WalletCommand {
 export function isValueMovingCommand(command: WalletCommand) {
   return command.kind === "send" || command.kind === "burn" || command.kind === "buy" || command.kind === "sell" || command.kind === "launch" || command.kind === "claim_fees";
 }
+
+function finitePositiveString(value: unknown) {
+  if (typeof value !== "string" || !/^[0-9]+(?:\.[0-9]+)?$/.test(value)) return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? value : undefined;
+}
+
+function tokenIdentifier(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const cleaned = cleanToken(value.trim());
+  return /^0x[a-fA-F0-9]{40}$/.test(cleaned) || /^[A-Z0-9]{1,32}$/.test(cleaned) ? cleaned : undefined;
+}
+
+/** Strictly validates untrusted structured output before it can reach execution. */
+export function validateStructuredWalletCommand(value: unknown): WalletCommand | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+  const kind = item.kind;
+  if (kind === "create_wallet" || kind === "show_wallet") return { kind };
+  if (kind === "show_balance") {
+    const token = item.token === undefined ? undefined : tokenIdentifier(item.token);
+    if (item.token !== undefined && !token) return null;
+    return { kind, ...(token ? { token } : {}) };
+  }
+  if (kind === "send") {
+    const amount = finitePositiveString(item.amount);
+    const unit = item.unit;
+    const recipient = typeof item.recipient === "string" && (/^@[a-zA-Z0-9_]{1,15}$/.test(item.recipient) || /^0x[a-fA-F0-9]{40}$/.test(item.recipient)) ? item.recipient : undefined;
+    const token = item.token === undefined ? undefined : tokenIdentifier(item.token);
+    if (!amount || !recipient || !["eth", "usd", "token", "percent"].includes(String(unit))) return null;
+    if ((unit === "token" || unit === "percent") && !token) return null;
+    if (unit === "percent" && Number(amount) > 100) return null;
+    return { kind, amount, unit: unit as AmountUnit, ...(token ? { token } : {}), recipient };
+  }
+  if (kind === "burn") {
+    const amount = finitePositiveString(item.amount);
+    const unit = item.unit;
+    const token = tokenIdentifier(item.token);
+    if (!amount || !token || !["usd", "token", "percent"].includes(String(unit))) return null;
+    if (unit === "percent" && Number(amount) > 100) return null;
+    return { kind, amount, unit: unit as AmountUnit, token };
+  }
+  if (kind === "buy" || kind === "sell") {
+    const amount = finitePositiveString(item.amount);
+    const token = tokenIdentifier(item.token);
+    const slippageBps = Number.isInteger(item.slippageBps) ? Number(item.slippageBps) : DEFAULT_SWAP_SLIPPAGE_BPS;
+    if (!amount || !token || slippageBps < 10 || slippageBps > 2_000) return null;
+    if (kind === "buy" && (item.unit === "eth" || item.unit === "usd")) return { kind, amount, unit: item.unit, token, slippageBps };
+    if (kind === "sell" && (item.unit === "token" || item.unit === "percent") && (item.unit !== "percent" || Number(amount) <= 100)) return { kind, amount, unit: item.unit, token, slippageBps };
+    return null;
+  }
+  if (kind === "claim_fees") {
+    const token = item.token === undefined ? undefined : tokenIdentifier(item.token);
+    if (item.token !== undefined && !token) return null;
+    return { kind, ...(token ? { token } : {}) };
+  }
+  if (kind === "launch") {
+    const name = typeof item.name === "string" ? item.name.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 48) : "";
+    const symbol = typeof item.symbol === "string" ? cleanSymbol(item.symbol) : "";
+    if (!name || !symbol) return null;
+    const optionalText = (key: string, max: number) => typeof item[key] === "string" && item[key] ? String(item[key]).slice(0, max) : undefined;
+    const optionalUrl = (key: string) => {
+      const candidate = optionalText(key, 300);
+      return candidate && /^https:\/\//i.test(candidate) ? candidate : undefined;
+    };
+    let devBuy: { amount: string; unit: "eth" | "usd" } | undefined;
+    if (item.devBuy && typeof item.devBuy === "object") {
+      const raw = item.devBuy as Record<string, unknown>;
+      const amount = finitePositiveString(raw.amount);
+      if (!amount || (raw.unit !== "eth" && raw.unit !== "usd") || (raw.unit === "eth" && Number(amount) > MAX_LAUNCH_DEV_BUY_ETH)) return null;
+      devBuy = { amount, unit: raw.unit };
+    }
+    return {
+      kind, launchMode: "curve", name, symbol,
+      ...(optionalText("description", 280) ? { description: optionalText("description", 280) } : {}),
+      ...(optionalUrl("website") ? { website: optionalUrl("website") } : {}),
+      ...(optionalUrl("twitter") ? { twitter: optionalUrl("twitter") } : {}),
+      ...(optionalUrl("telegram") ? { telegram: optionalUrl("telegram") } : {}),
+      ...(devBuy ? { devBuy } : {}),
+    };
+  }
+  return null;
+}

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { isValueMovingCommand, parseWalletCommand, type WalletCommand } from "./walletCommands";
+import { isValueMovingCommand, parseWalletCommand, validateStructuredWalletCommand, type WalletCommand } from "./walletCommands";
 
 const ROBINHOOD_CHAIN_ID = 4663;
 const NON_PREMIUM_DAILY_LIMIT = 10;
@@ -77,7 +77,7 @@ function commandSummary(command: WalletCommand) {
 }
 
 function transactionMessage(command: WalletCommand, transactionHash: string, status: "submitted" | "confirmed", tokenAddress?: string) {
-  const summary = status === "submitted" ? `${commandSummary(command)} Confirmation pending.` : commandSummary(command);
+  const summary = commandSummary(command);
   const tokenLine = command.kind === "launch" && tokenAddress ? `\nYour token: ${addressUrl(tokenAddress)}` : "";
   return `${summary}${tokenLine}\nYour TXN: ${transactionUrl(transactionHash)}`;
 }
@@ -481,21 +481,26 @@ function safeFailure(error: unknown) {
   if (/ETH transfer amount plus gas exceeds/i.test(message)) return "The ETH transfer amount plus gas exceeds your wallet balance. Add ETH for gas.";
   if (/insufficient ETH for gas/i.test(message)) return "Add ETH for gas.";
   if (/insufficient/i.test(message)) return "Insufficient funds for the requested amount.";
-  if (/image/i.test(message)) return "the token image could not be prepared";
-  if (/specify the token|ticker matches|launch was not found|no completed PotatoPad launch/i.test(message)) return message;
-  if (/launch creator|fee beneficiary/i.test(message)) return "that wallet is not authorized to claim fees for this launch";
-  if (/locker relationship|position assets/i.test(message)) return "the launch could not be matched to the verified PotatoPad fee locker";
-  if (/held token|contract address|token lookup/i.test(message)) return message;
-  if (/pool|liquidity|quote returned no output/i.test(message)) return "no usable trading route or liquidity was found for that token";
-  if (/slippage/i.test(message)) return "the trade moved beyond the requested slippage before it could be confirmed";
-  if (/0\.02627 ETH maximum|initial dev buy exceeds/i.test(message)) return "the maximum initial dev buy is 0.02627 eth";
-if (/disabled|not configured|unavailable/i.test(message)) {
-  console.error("wallet_configuration_failure", { message });
-  return message;
-}  
- if (/revert|simulation/i.test(message)) return "the transaction was rejected during its safety check";
+  if (/image/i.test(message)) return "I couldn't prepare the attached image. Please try another image or launch without one.";
+  if (/ticker matches/i.test(message)) return "More than one held token uses that ticker. Please try again with the contract address.";
+  if (/specify the token|contract address|token lookup|held token/i.test(message)) return "I couldn't identify that token. Please use a ticker you hold or its contract address.";
+  if (/launch was not found|no completed PotatoPad launch/i.test(message)) return "I couldn't find a completed PotatoPad launch for that token.";
+  if (/launch creator|fee beneficiary/i.test(message)) return "This wallet isn't authorized to claim fees for that launch.";
+  if (/locker relationship|position assets/i.test(message)) return "I couldn't verify that launch's PotatoPad fee position.";
+  if (/invalid transfer destination/i.test(message)) return "I couldn't identify the recipient. Please use an X handle or wallet address.";
+  if (/pool|liquidity|quote returned no output/i.test(message)) return "I couldn't find enough liquidity or a usable trading route for that token.";
+  if (/slippage/i.test(message)) return "The price moved beyond your slippage setting. Please try again or choose a higher slippage.";
+  if (/0\.02627 ETH maximum|initial dev buy exceeds/i.test(message)) return "The maximum initial dev buy is 0.02627 ETH.";
+  if (/website must use https/i.test(message)) return "The website link must begin with https://.";
+  if (/twitter link uses an unsupported host/i.test(message)) return "Please use an x.com link for the X social field.";
+  if (/telegram link uses an unsupported host/i.test(message)) return "Please use a t.me link for the Telegram social field.";
+  if (/disabled|not configured|unavailable/i.test(message)) {
+    console.error("wallet_configuration_failure", { message });
+    return "This wallet service is temporarily unavailable. Please try again shortly.";
+  }
+  if (/revert|simulation/i.test(message)) return "The transaction couldn't be completed. No confirmed transaction was made.";
   console.error("wallet_unclassified_failure", { message });
-return message;
+  return "I couldn't complete that wallet request. Please check the details and try again.";
 }
 
 async function submit(wallet: { signerWalletRef: string; address: string }, xUserId: string, requestId: string, operation: Record<string, unknown>) {
@@ -541,19 +546,22 @@ export const ensureWallet = internalAction({
 export const executeCommand = internalAction({
   args: {
     sourcePostId: v.string(), xUserId: v.string(), text: v.string(),
-    mediaUrl: v.optional(v.string()), recipientAddress: v.optional(v.string()),
+    mediaUrl: v.optional(v.string()), recipientAddress: v.optional(v.string()), parsedCommandJson: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<CommandResult> => {
-    const command = parseWalletCommand(args.text);
+    const structured = args.parsedCommandJson
+      ? validateStructuredWalletCommand(JSON.parse(args.parsedCommandJson) as unknown)
+      : null;
+    const command = structured || parseWalletCommand(args.text);
     const userContext = await ctx.runQuery(internal.wallets.getXUserAndWallet, { xUserId: args.xUserId });
-    if (!userContext) return { ok: false, message: "the account could not be bound to the root" };
+    if (!userContext) return { ok: false, message: "I couldn't connect this X account to its wallet. Please try again." };
     let wallet = userContext.wallet;
     try {
       wallet ||= await ctx.runAction(internal.wallets.ensureWallet, { xUserId: args.xUserId });
     } catch (error) {
       return { ok: false, message: safeFailure(error) };
     }
-    if (!wallet || wallet.status !== "active") return { ok: false, message: "the wallet root is unavailable" };
+    if (!wallet || wallet.status !== "active") return { ok: false, message: "This wallet is unavailable." };
     if (command.kind === "create_wallet" || command.kind === "show_wallet") {
       return { ok: true, message: `Your wallet: ${addressUrl(wallet.address)}` };
     }
@@ -582,14 +590,14 @@ export const executeCommand = internalAction({
         ok: prior?.status === "confirmed",
         message: prior?.transactionHash
           ? `Already processed.\nYour TXN: ${transactionUrl(prior.transactionHash)}`
-          : "this command is already being processed",
+          : "This request is already being processed.",
         ...(prior?.transactionHash ? { transactionHash: prior.transactionHash } : {}),
       };
     }
 
     if (command.kind === "launch" && !userContext.user.verified) {
       await ctx.runMutation(internal.wallets.updateWalletRequest, { requestId, status: "rejected", safeError: "verified X account required" });
-      return { ok: false, message: "only verified accounts can plant tokens" };
+      return { ok: false, message: "Token launches are currently available to verified X accounts." };
     }
     if (isValueMovingCommand(command)) {
       const limit = reserved.retried
@@ -599,7 +607,7 @@ export const executeCommand = internalAction({
         });
       if (!limit.allowed) {
         await ctx.runMutation(internal.wallets.updateWalletRequest, { requestId, status: "rejected", safeError: "daily wallet limit reached" });
-        return { ok: false, message: "today's wallet action limit has already been reached" };
+        return { ok: false, message: "You've reached today's wallet action limit. It resets at 00:00 UTC." };
       }
       const warning = limit.remaining === 2 ? " 2 wallet actions remain today." : limit.remaining === 1 ? " 1 wallet action remains today." : limit.remaining === 0 ? " today's wallet limit is now exhausted." : "";
       try {
@@ -654,37 +662,13 @@ export const executeCommand = internalAction({
         }
         return { ok: true, transactionHash: result.transactionHash, message: `${transactionMessage(command, result.transactionHash, "confirmed")}${warning}` };
       } catch (error) {
-        if (command.kind === "sell" && error instanceof Error && /sell approval required/i.test(error.message)) {
-          try {
-            const approval = await submit(wallet, args.xUserId, requestId, {
-              type: "erc20_approve_router", token: command.token, amount: command.amount, unit: command.unit, routerAddress: VERIFIED_SWAP_ROUTER,
-            });
-            if (approval.status !== "prepared" || !approval.signedTransaction || !/^0x[a-fA-F0-9]+$/.test(approval.signedTransaction)) {
-              throw new Error("signer returned an invalid approval transaction");
-            }
-            await ctx.runMutation(internal.wallets.recordPreparedExecution, {
-              requestId, walletId: wallet._id, to: command.token,
-              valueWei: "0", callKind: "erc20_approve_router", transactionHash: approval.transactionHash,
-              signedTransaction: approval.signedTransaction,
-            });
-            await ctx.runAction(internal.wallets.reconcileTransaction, { requestId });
-            return {
-              ok: true, transactionHash: approval.transactionHash,
-              message: `Router approval submitted. After it confirms, send the sell command again.\nYour TXN: ${transactionUrl(approval.transactionHash)}${warning}`,
-            };
-          } catch (approvalError) {
-            const approvalMessage = safeFailure(approvalError);
-            await ctx.runMutation(internal.wallets.updateWalletRequest, { requestId, status: "failed", safeError: approvalMessage });
-            return { ok: false, message: `${fundingMessage(approvalMessage, wallet.address)}${warning}` };
-          }
-        }
         const message = safeFailure(error);
         const userMessage = fundingMessage(message, wallet.address);
         await ctx.runMutation(internal.wallets.updateWalletRequest, { requestId, status: "failed", safeError: message });
         return { ok: false, message: `${userMessage}${warning}` };
       }
     }
-    return { ok: false, message: "that wallet command is not available yet" };
+    return { ok: false, message: "I can create your wallet, show balances, buy, sell, send, burn, claim eligible creator fees, and launch tokens through PotatoPad. Ask what you want to do and include the amount and token when needed." };
   },
 });
 
@@ -725,7 +709,6 @@ async function operationFor(
   if (command.kind === "launch") {
     const padAddress = process.env.POTATOPAD_CURVE_ADDRESS || VERIFIED_CURVE_PAD;
     if (!padAddress || !safeAddress(padAddress)) throw new Error("launch contract is not configured");
-    if (!mediaUrl) throw new Error("a token launch requires an attached image");
     const imageUri = await normalizeImage(mediaUrl);
     const metadata = resolveLaunchMetadata(command, launcherUsername);
     return {

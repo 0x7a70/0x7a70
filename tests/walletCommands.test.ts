@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseWalletCommand } from "../convex/walletCommands";
+import { parseWalletCommand, validateStructuredWalletCommand } from "../convex/walletCommands";
 
 describe("X wallet commands", () => {
   it("parses buys with default and custom slippage", () => {
@@ -117,6 +117,17 @@ describe("X wallet commands", () => {
     });
     expect(parseWalletCommand("transfer all ETH to @recipient")).toEqual({
       kind: "send", amount: "100", unit: "percent", token: "ETH", recipient: "@recipient",
+    });
+  });
+
+  it("strictly validates AI-parsed commands before execution", () => {
+    expect(validateStructuredWalletCommand({ kind: "send", amount: "25", unit: "token", token: "ROOT", recipient: "@friend" })).toEqual({
+      kind: "send", amount: "25", unit: "token", token: "ROOT", recipient: "@friend",
+    });
+    expect(validateStructuredWalletCommand({ kind: "send", amount: "-25", unit: "token", token: "ROOT", recipient: "@friend" })).toBeNull();
+    expect(validateStructuredWalletCommand({ kind: "burn", amount: "101", unit: "percent", token: "ROOT" })).toBeNull();
+    expect(validateStructuredWalletCommand({ kind: "launch", name: "Root", symbol: "ROOT", launchMode: "other" })).toMatchObject({
+      kind: "launch", launchMode: "curve", name: "Root", symbol: "ROOT",
     });
   });
 });
