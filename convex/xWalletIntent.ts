@@ -84,20 +84,36 @@ function extractJson(raw: string) {
   try { return JSON.parse(source.slice(start, end + 1)) as unknown; } catch { return null; }
 }
 
-function validateIntent(value: unknown, text: string): XWalletIntent | null {
+type CommandKind = Exclude<WalletCommand, { kind: "unknown" }>["kind"];
+type ClassifiedIntent =
+  | { kind: "irrelevant" }
+  | { kind: "unknown_wallet" }
+  | { kind: "help"; topic: WalletHelpTopic }
+  | { kind: "command"; command: CommandKind };
+
+const HELP_TOPICS: WalletHelpTopic[] = ["capabilities", "wallet", "fund", "balance", "send", "buy_sell", "burn", "launch", "fees"];
+const COMMAND_KINDS: CommandKind[] = ["create_wallet", "show_wallet", "show_balance", "send", "burn", "buy", "sell", "claim_fees", "launch"];
+
+function validateClassification(value: unknown): ClassifiedIntent | null {
   if (!value || typeof value !== "object") return null;
   const item = value as Record<string, unknown>;
   if (item.kind === "irrelevant") return { kind: "irrelevant" };
   if (item.kind === "unknown_wallet") return { kind: "unknown_wallet" };
-  if (item.kind === "help" && ["capabilities", "wallet", "fund", "balance", "send", "buy_sell", "burn", "launch", "fees"].includes(String(item.topic))) {
+  if (item.kind === "help" && HELP_TOPICS.includes(item.topic as WalletHelpTopic)) {
     return { kind: "help", topic: item.topic as WalletHelpTopic };
   }
-  if (item.kind === "command") {
-    const command = validateStructuredWalletCommand(item.command);
-    if (!command || command.kind === "unknown" || !explicitAuthority(text, command) || !fieldsAreGrounded(text, command)) return { kind: "unknown_wallet" };
-    return { kind: "command", command };
-  }
+  if (item.kind === "command" && COMMAND_KINDS.includes(item.command as CommandKind)) return { kind: "command", command: item.command as CommandKind };
   return null;
+}
+
+function validateExtractedCommand(value: unknown, expectedKind: CommandKind, text: string): WalletCommand | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+  const candidate = item.command && typeof item.command === "object" ? item.command : item;
+  const command = validateStructuredWalletCommand(candidate);
+  if (!command || command.kind === "unknown" || command.kind !== expectedKind) return null;
+  if (!explicitAuthority(text, command) || !fieldsAreGrounded(text, command)) return null;
+  return command;
 }
 
 function deterministicFallback(text: string): XWalletIntent {
@@ -118,46 +134,75 @@ function deterministicFallback(text: string): XWalletIntent {
   return { kind: "unknown_wallet" };
 }
 
-export async function parseXWalletIntent(text: string, hasImage: boolean): Promise<XWalletIntent> {
-  const prompt = `You parse one direct X mention for a Robinhood Chain wallet bot. Return one JSON object only. Never write the reply.
+function deterministicClassification(text: string): ClassifiedIntent {
+  const fallback = deterministicFallback(text);
+  if (fallback.kind !== "command") return fallback;
+  return { kind: "command", command: fallback.command.kind as CommandKind };
+}
 
-Allowed intent shapes:
+async function classifyIntent(text: string): Promise<ClassifiedIntent> {
+  const prompt = `Classify one direct X mention for a Robinhood Chain wallet bot. Determine intent only. Do not extract, repeat, or return amounts, names, tickers, contracts, recipients, links, images, or other parameters. Return exactly one JSON object and no prose.
+
+Allowed outputs:
 {"kind":"irrelevant"}
 {"kind":"unknown_wallet"}
 {"kind":"help","topic":"capabilities|wallet|fund|balance|send|buy_sell|burn|launch|fees"}
-{"kind":"command","command":COMMAND}
+{"kind":"command","command":"create_wallet|show_wallet|show_balance|send|burn|buy|sell|claim_fees|launch"}
 
-COMMAND kinds and fields:
-- create_wallet or show_wallet
-- show_balance, optional token
-- send: amount decimal string, unit eth|usd|token|percent, optional token, recipient @handle or 0x address
-- burn: amount, unit usd|token|percent, token
-- buy: amount, unit eth|usd, token, slippageBps integer (default 250)
-- sell: amount, unit token|percent, token, slippageBps integer (default 250)
-- claim_fees, optional token
-- launch: launchMode curve, name, symbol, optional description, website, twitter, telegram, devBuy {amount,unit eth|usd}
-
-LAUNCH PARSING
-Recognize launch requests despite flexible order, punctuation, capitalization, filler words, greetings, or explanations. The action may be phrased as launch, plant, create, deploy, or sprout a token or coin. The name and ticker may appear before or after each other and may use labels such as name, called, named, ticker, symbol, or shorthand punctuation. A ticker may be written as SEED, $SEED, (SEED), ticker: SEED, symbol=$SEED, or clearly paired with the name. Examples of equivalent structure include:
-- launch a token called Potato Seed, ticker $SEED
-- please plant $SEED, the name is Potato Seed
-- deploy Potato Seed (SEED)
-- token name: Potato Seed / symbol: SEED / launch it
-- launch Potato Seed with SEED as the ticker
-- could you create a coin? ticker $SEED; call it Potato Seed
-These examples teach arrangement only. Extract the user's actual values. Do not confuse a dev-buy dollar amount, an X handle, a URL component, ordinary capitalized prose, or the bot's @mention with the ticker. Remove only a leading $ from the returned symbol and uppercase it. Preserve internal spaces and punctuation in the name while trimming surrounding quotes and separators. If name or ticker has more than one plausible interpretation, return unknown_wallet. Images are optional; hasImage only reports whether the separately supplied attachment exists.
-
-Classify questions about abilities or instructions as help, never as commands. Classify a post with no wallet, trading, transfer, burn, fee, or launch purpose as irrelevant. A valid command may contain a greeting, politeness, a reason for the request, or unrelated commentary before or after it. Ignore that surrounding prose and extract the explicit command normally. Do not downgrade a clear command merely because extra text is present. If a post contains more than one distinct wallet action, return unknown_wallet rather than choosing one. Use unknown_wallet when the post is clearly about these wallet or launch features but required meaning is ambiguous or missing. A request for 'my wallet', 'wallet address', or where to fund is show_wallet, not a definition. Preserve 0x addresses exactly. Remove commas from numbers. Convert all/half/percent to unit percent and amount 100/50/value. Tickers may have a leading $; return them without $. Never infer a recipient, amount, token, launch name, or ticker. Launch name and symbol must be separately identified from labels, quotes, or clear grammar. Links must remain exact expanded HTTPS URLs. An attached image exists: ${hasImage ? "yes" : "no"}. Do not invent its URL. Burn is a command only if the exact word burn appears. The direct post alone is authoritative.`;
+Use help for questions about what the bot can do or how a feature works. A request for the user's actual wallet, wallet address, balance, or funds is a command, even if phrased as a question. Use irrelevant when there is no wallet, trade, transfer, burn, fee, balance, or launch purpose. Use unknown_wallet when the message concerns these features but the intended action is unclear, or when it explicitly asks for multiple different actions. Greetings, reasons, jokes, and commentary may surround one command and should not hide it. Burn is a command only when the exact word burn appears. Analyze only this direct post.`;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const raw = await openRouter([{ role: "system", content: prompt }, { role: "user", content: text }], 350, {
-        reasoningEffort: "high", minimumCompletionTokens: 1_500, timeoutMs: 30_000, providerSort: "latency", temperature: 0,
+      const raw = await openRouter([{ role: "system", content: prompt }, { role: "user", content: text }], 80, {
+        reasoningEffort: "high", minimumCompletionTokens: 1_000, timeoutMs: 25_000, providerSort: "latency", temperature: 0,
       });
-      const intent = validateIntent(extractJson(raw), text);
-      if (intent) return intent;
+      const classified = validateClassification(extractJson(raw));
+      if (classified) return classified;
     } catch (error) {
-      console.error("x_intent_parse_failed", { attempt: attempt + 1, message: error instanceof Error ? error.message : "unknown" });
+      console.error("x_intent_classification_failed", { attempt: attempt + 1, message: error instanceof Error ? error.message : "unknown" });
     }
   }
-  return deterministicFallback(text);
+  return deterministicClassification(text);
+}
+
+function extractionInstructions(kind: CommandKind, hasImage: boolean) {
+  const common = `Return exactly one JSON object containing the command fields and no prose. Extract only values explicitly present in the direct post. Never invent or repair a missing amount, name, ticker, contract, recipient, link, or percentage. Remove commas from numeric amounts. Preserve 0x addresses exactly. The expected command kind is ${kind}; never return another kind.`;
+  const instructions: Record<CommandKind, string> = {
+    create_wallet: `Return {"kind":"create_wallet"}. Use this only for a request to create, open, make, or set up the user's wallet.`,
+    show_wallet: `Return {"kind":"show_wallet"}. This includes flexible requests for the user's wallet, wallet address, deposit address, funding address, receiving address, or where to send ETH.`,
+    show_balance: `Return {"kind":"show_balance"} with optional "token" only when a ticker or contract is explicitly requested. A general balance request has no token field.`,
+    send: `Return {"kind":"send","amount":"...","unit":"eth|usd|token|percent","token":"... when required","recipient":"@handle or 0x address"}. Recognize send, transfer, and give. Amount, asset, and recipient may appear in any order. For all/half/XX%, use percent with 100/50/value. A USD amount applied to a token keeps that token. Do not confuse the bot mention with the recipient.`,
+    burn: `Return {"kind":"burn","amount":"...","unit":"usd|token|percent","token":"..."}. The exact word burn must be present. Recognize token quantities, USD worth, all, half, and percentages. Never infer a burn from destroy, remove, or send.`,
+    buy: `Return {"kind":"buy","amount":"...","unit":"eth|usd","token":"...","slippageBps":250}. Extract a custom slippage as percentage times 100, from 10 through 2000 basis points. Keep $ used as a USD prefix separate from $ used before a ticker.`,
+    sell: `Return {"kind":"sell","amount":"...","unit":"token|percent","token":"...","slippageBps":250}. Recognize quantities, all, half, and percentages in flexible order. Extract a custom slippage as percentage times 100, from 10 through 2000 basis points.`,
+    claim_fees: `Return {"kind":"claim_fees"} with optional "token" only when a ticker or contract is explicitly supplied. This is only for an explicit request to claim creator fees, revenue, or rewards.`,
+    launch: `Return {"kind":"launch","launchMode":"curve","name":"...","symbol":"..."} plus optional description, website, twitter, telegram, and devBuy {amount,unit}. Name and ticker are required and may appear in any order. Recognize launch, plant, create, deploy, and sprout. Tickers may be SEED, $SEED, (SEED), ticker: SEED, symbol=$SEED, or written before the name. Remove a leading $ and uppercase the symbol. Names may be quoted or introduced by name, called, named, or call it. Do not mistake a dev-buy dollar amount, URL, X handle, bot mention, or ordinary capitalized word for the ticker. Preserve optional HTTPS links exactly. Dev buy may be USD or ETH. The separately supplied post has an attached image: ${hasImage ? "yes" : "no"}; images are optional and their URL is not part of this JSON.`,
+  };
+  return `${common}\n\n${instructions[kind]}`;
+}
+
+async function extractCommand(text: string, kind: CommandKind, hasImage: boolean): Promise<WalletCommand | null> {
+  const prompt = extractionInstructions(kind, hasImage);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const raw = await openRouter([{ role: "system", content: prompt }, { role: "user", content: text }], kind === "launch" ? 400 : 220, {
+        reasoningEffort: "high", minimumCompletionTokens: kind === "launch" ? 1_500 : 1_000,
+        timeoutMs: 30_000, providerSort: "latency", temperature: 0,
+      });
+      const command = validateExtractedCommand(extractJson(raw), kind, text);
+      if (command) return command;
+    } catch (error) {
+      console.error("x_parameter_extraction_failed", { kind, attempt: attempt + 1, message: error instanceof Error ? error.message : "unknown" });
+    }
+  }
+  const fallback = parseWalletCommand(text);
+  return fallback.kind === kind ? fallback : null;
+}
+
+export async function parseXWalletIntent(text: string, hasImage: boolean): Promise<XWalletIntent> {
+  const classified = await classifyIntent(text);
+  if (classified.kind !== "command") return classified;
+  const command = await extractCommand(text, classified.command, hasImage);
+  if (command) return { kind: "command", command };
+  const fallback = parseWalletCommand(text);
+  return fallback.kind === "unknown" ? { kind: "unknown_wallet" } : { kind: "command", command: fallback };
 }
